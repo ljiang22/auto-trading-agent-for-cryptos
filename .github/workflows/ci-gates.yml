@@ -1,0 +1,104 @@
+# §8.9 — Required PR CI gates for the autotrading subsystem.
+#
+# A failure on this workflow blocks merge. It exercises the macro-F1
+# threshold for the ADK intent classifier, the pre-submit dedup gate,
+# the fail-closed dep-health helper, the prompt-injection / user-error
+# / venue-call sanitization unit tests, and the §6 audit/safety DoD
+# tests added in PR #203.
+#
+# Keep this workflow scoped to fast, hermetic tests. Heavier scans
+# (chaos drills, paper soak, replay against a real DocumentDB) run on a
+# nightly cadence.
+
+name: CI gates
+
+on:
+    pull_request:
+        branches: [main, staging]
+        paths:
+            - "packages/**"
+            - "agent/**"
+            - "client/**"
+            - "scripts/qa/**"
+            - "package.json"
+            - "pnpm-lock.yaml"
+            - ".github/workflows/ci-gates.yml"
+    push:
+        branches: [main, staging]
+
+concurrency:
+    group: ci-gates-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    test-ci-gates:
+        name: pnpm test:ci-gates
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v3
+              with:
+                  version: 9.15.7
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "23.3.0"
+                  cache: pnpm
+
+            - name: Install workspace dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build @elizaos/core (consumers depend on dist/)
+              run: pnpm --filter @elizaos/core build
+
+            - name: Build @elizaos-plugins/plugin-cex
+              run: pnpm --filter @elizaos-plugins/plugin-cex build
+
+            - name: Run CI gates
+              run: pnpm test:ci-gates
+
+    test-safety-audit:
+        name: §6 safety + audit DoD
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v3
+              with:
+                  version: 9.15.7
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "23.3.0"
+                  cache: pnpm
+
+            - name: Install workspace dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build @elizaos/core
+              run: pnpm --filter @elizaos/core build
+
+            - name: Build @elizaos-plugins/plugin-cex
+              run: pnpm --filter @elizaos-plugins/plugin-cex build
+
+            - name: §6.0.3 UNKNOWN-state safety
+              run: pnpm --filter @elizaos-plugins/plugin-cex exec vitest run __tests__/safety/unknownState.test.ts __tests__/safety/dependencyHealth.test.ts
+
+            - name: §6.1 risk audit persistence
+              run: pnpm --filter @elizaos-plugins/plugin-cex exec vitest run __tests__/risk/auditPersistence.test.ts
+
+            - name: §6 audit completeness
+              run: pnpm --filter @elizaos-plugins/plugin-cex exec vitest run __tests__/audit/completeness.test.ts
+
+            - name: §6.4 secrets-in-payload regression
+              run: pnpm --filter @elizaos-plugins/plugin-cex exec vitest run __tests__/observability/secretsLeak.test.ts __tests__/observability/venueCallLog.test.ts
+
+            - name: §6.7 replay byte-stability
+              run: pnpm exec vitest run --config vitest.config.qa.ts

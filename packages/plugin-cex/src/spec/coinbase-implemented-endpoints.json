@@ -1,0 +1,191 @@
+{
+  "exchange": "coinbase",
+  "version": "1.0.0",
+  "scope": "implemented_endpoints_only",
+  "canonicalRef": "packages/plugin-cex/src/spec/canonical.ts",
+  "docsReferences": [
+    "https://docs.cdp.coinbase.com/api-reference/advanced-trade-api/rest-api/"
+  ],
+  "actions": {
+    "get_balance": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "limit", "type": "number", "required": false },
+        { "name": "cursor", "type": "string", "required": false },
+        { "name": "retail_portfolio_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v3/brokerage/accounts",
+          "serviceMethod": "CoinbaseAccountsService.getBalance",
+          "wiring": "action"
+        }
+      ],
+      "requestMapping": {
+        "limit": { "target": "limit" },
+        "cursor": { "target": "cursor" },
+        "retail_portfolio_id": { "target": "retail_portfolio_id" }
+      },
+      "exchangeRestrictions": []
+    },
+    "get_orders": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "order_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "product_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "order_status", "type": "array", "itemsType": "string", "required": false },
+        { "name": "limit", "type": "number", "required": false },
+        { "name": "cursor", "type": "string", "required": false },
+        { "name": "start_date", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "end_date", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "order_side", "type": "enum", "enum": ["BUY", "SELL"], "required": false },
+        { "name": "order_types", "type": "array", "itemsType": "string", "required": false },
+        { "name": "product_type", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v3/brokerage/orders/historical/batch",
+          "serviceMethod": "CoinbaseOrdersService.getOrders",
+          "wiring": "action"
+        }
+      ],
+      "requestMapping": {
+        "order_ids": { "target": "order_ids" },
+        "product_ids": { "target": "product_ids" },
+        "order_status": { "target": "order_status" },
+        "limit": { "target": "limit" },
+        "cursor": { "target": "cursor" },
+        "start_date": { "target": "start_date", "notes": "Converted to RFC3339 by service helper." },
+        "end_date": { "target": "end_date", "notes": "Converted to RFC3339 by service helper." },
+        "order_side": { "target": "order_side" },
+        "order_types": { "target": "order_types" },
+        "product_type": { "target": "product_type" }
+      },
+      "exchangeRestrictions": [
+        { "kind": "requiresProductIdsWithOrderIds", "value": false, "enforcedBy": "preflightValidateForExchange" }
+      ]
+    },
+    "create_order": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "client_order_id", "type": "string", "required": true },
+        { "name": "product_id", "type": "string", "required": true },
+        { "name": "side", "type": "enum", "enum": ["BUY", "SELL"], "required": true },
+        { "name": "order_configuration", "type": "object", "required": true },
+        { "name": "leverage", "type": "string", "required": false },
+        { "name": "margin_type", "type": "enum", "enum": ["CROSS", "ISOLATED"], "required": false },
+        { "name": "preview_id", "type": "string", "required": false },
+        { "name": "retail_portfolio_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "POST",
+          "path": "/api/v3/brokerage/orders",
+          "serviceMethod": "CoinbaseOrdersService.createOrder",
+          "wiring": "action"
+        }
+      ],
+      "requestMapping": {
+        "client_order_id": { "target": "client_order_id" },
+        "product_id": { "target": "product_id" },
+        "side": { "target": "side" },
+        "order_configuration": { "target": "order_configuration" },
+        "leverage": { "target": "leverage" },
+        "margin_type": { "target": "margin_type" },
+        "preview_id": { "target": "preview_id" },
+        "retail_portfolio_id": { "target": "retail_portfolio_id" }
+      },
+      "exchangeRestrictions": [
+        { "kind": "unsupportedOrderConfigurationVariants", "value": [], "enforcedBy": "preflightValidateForExchange" },
+        { "kind": "quoteSizeOnlyForMarketIoc", "value": false, "enforcedBy": "preflightValidateForExchange" },
+        { "kind": "postOnlyOnlyForLimitGtc", "value": false, "enforcedBy": "preflightValidateForExchange" }
+      ],
+      "f11ParityNotes": {
+        "stop_limit": "Native — variant `stop_limit_stop_limit_gtc` / `stop_limit_stop_limit_gtd` passes through unchanged.",
+        "time_in_force": "Native — TIF carried as a suffix on the variant name (GTC/GTD/IOC/FOK).",
+        "post_only": "Native — `limit_limit_gtc.post_only` field passes through unchanged.",
+        "gtd": "Native — `_gtd` variants (`limit_limit_gtd`, `stop_limit_stop_limit_gtd`, `trigger_bracket_gtd`) require `end_time` as an RFC3339 timestamp. Coinbase's POST /api/v3/brokerage/orders accepts this field name verbatim — no rename / transform needed. Auditor-confirmed 2026-05-19.",
+        "margin": "OUT OF SCOPE — Coinbase Advanced Trade does not expose spot margin in the canonical-intent shape used by Binance. Margin orders submitted against a Coinbase venue will surface a validator error before dispatch."
+      }
+    },
+    "cancel_order": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "order_ids", "type": "array", "itemsType": "string", "required": true },
+        { "name": "product_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "POST",
+          "path": "/api/v3/brokerage/orders/batch_cancel",
+          "serviceMethod": "CoinbaseOrdersService.cancelOrder",
+          "wiring": "action"
+        }
+      ],
+      "requestMapping": {
+        "order_ids": { "target": "order_ids" },
+        "product_id": { "target": null, "notes": "Accepted by canonical schema for cross-exchange compatibility; not sent to Coinbase endpoint." }
+      },
+      "exchangeRestrictions": [
+        { "kind": "requiresProductIdFallback", "value": false, "enforcedBy": "preflightValidateForExchange" }
+      ]
+    },
+    "get_fills": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "order_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "trade_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "product_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "limit", "type": "number", "required": false },
+        { "name": "cursor", "type": "string", "required": false },
+        { "name": "start_sequence_timestamp", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "end_sequence_timestamp", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "retail_portfolio_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v3/brokerage/orders/historical/fills",
+          "serviceMethod": "CoinbaseOrdersService.getFills",
+          "wiring": "action"
+        }
+      ],
+      "requestMapping": {
+        "order_ids": { "target": "order_ids" },
+        "trade_ids": { "target": "trade_ids" },
+        "product_ids": { "target": "product_ids" },
+        "limit": { "target": "limit" },
+        "cursor": { "target": "cursor" },
+        "start_sequence_timestamp": { "target": "start_sequence_timestamp", "notes": "Converted to RFC3339 by service helper." },
+        "end_sequence_timestamp": { "target": "end_sequence_timestamp", "notes": "Converted to RFC3339 by service helper." },
+        "retail_portfolio_id": { "target": "retail_portfolio_id" }
+      },
+      "exchangeRestrictions": [
+        { "kind": "requiresProductIds", "value": false, "enforcedBy": "preflightValidateForExchange" }
+      ]
+    }
+  },
+  "serviceOnlyEndpoints": [
+    {
+      "name": "edit_order",
+      "method": "POST",
+      "path": "/api/v3/brokerage/orders/edit",
+      "serviceMethod": "CoinbaseOrdersService.editOrder",
+      "notes": "Implemented in service, not exposed as canonical action."
+    },
+    {
+      "name": "close_position",
+      "method": "POST",
+      "path": "/api/v3/brokerage/orders/close_position",
+      "serviceMethod": "CoinbaseOrdersService.closePosition",
+      "notes": "Implemented in service, not exposed as canonical action."
+    }
+  ]
+}

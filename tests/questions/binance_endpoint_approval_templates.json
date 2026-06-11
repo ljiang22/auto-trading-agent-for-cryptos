@@ -1,0 +1,63 @@
+{
+  "description": "Approval payload presets for Binance endpoint and payload-shape coverage.",
+  "defaults": {
+    "decision": "approved",
+    "feedback": "Approved by automated endpoint coverage suite."
+  },
+  "confirmationLevel1": {
+    "decision": "approved",
+    "feedback": "L1 approved with default test payload."
+  },
+  "confirmationLevel2": {
+    "decision": "approved",
+    "feedback": "L2 approved with default test payload."
+  },
+  "marketQuoteBuy": {
+    "decision": "approved",
+    "feedback": "Approve market quote-size buy test.",
+    "parameters": {
+      "userId": "<filled-by-agent>",
+      "client_order_id": "binance-mkt-quote-buy-001",
+      "product_id": "BTC-USDT",
+      "side": "BUY",
+      "order_configuration": {
+        "market_market_ioc": {
+          "quote_size": "1.00"
+        }
+      }
+    }
+  },
+  "limitGtcSell": {
+    "decision": "approved",
+    "feedback": "Approve limit GTC sell payload test.",
+    "parameters": {
+      "userId": "<filled-by-agent>",
+      "client_order_id": "binance-limit-gtc-sell-001",
+      "product_id": "BTC-USDT",
+      "side": "SELL",
+      "order_configuration": {
+        "limit_limit_gtc": {
+          "base_size": "0.0001",
+          "limit_price": "150000"
+        }
+      }
+    }
+  },
+  "stopLimitBuy": {
+    "decision": "approved",
+    "feedback": "Approve stop-limit buy payload test.",
+    "parameters": {
+      "userId": "<filled-by-agent>",
+      "client_order_id": "binance-stop-limit-buy-001",
+      "product_id": "BTC-USDT",
+      "side": "BUY",
+      "order_configuration": {
+        "stop_limit_stop_limit_gtc": {
+          "base_size": "0.0001",
+          "stop_price": "50000",
+          "limit_price": "50500"
+        }
+      }
+    }
+  }
+}

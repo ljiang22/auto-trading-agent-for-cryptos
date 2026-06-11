@@ -1,0 +1,97 @@
+{
+  "test_suite_name": "CEX Plan-as-Text Shape",
+  "version": "1.0",
+  "description": "Spot-check fixtures for the D2 plan-as-text path. Used by scripts/eval-classifier.mjs --plan-shape after confirming a question lands in CEX_WORKFLOW_MESSAGE. Each entry asserts a minStep count and a small bag of must-contain keywords — no order execution.",
+  "questions": [
+    {
+      "id": 401,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Build me a DCA plan to buy $50 of BTC every week for the next 8 weeks",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 8, "containsKeywords": ["DCA", "weekly", "BTC", "$50"] }
+    },
+    {
+      "id": 402,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Plan how to scale into an ETH position over the next 5 days based on RSI levels",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 3, "containsKeywords": ["ETH", "scale", "RSI"] }
+    },
+    {
+      "id": 403,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Build a 5-level buy ladder for BTC between $60k and $65k",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 5, "containsKeywords": ["ladder", "BTC", "60", "65"] }
+    },
+    {
+      "id": 404,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Screen the top 5 altcoins and place buy orders for the strongest 3 on Binance",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 3, "containsKeywords": ["screen", "buy", "Binance"] }
+    },
+    {
+      "id": 405,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Rotate my ETH into BTC over the next 3 days",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 3, "containsKeywords": ["rotate", "ETH", "BTC"] }
+    },
+    {
+      "id": 406,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Set up a take-profit ladder for my BTC position at 70k, 72k, 75k",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 3, "containsKeywords": ["take-profit", "BTC", "70", "72", "75"] }
+    },
+    {
+      "id": 407,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Build a 4-week dollar-weighted entry plan for ETH",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 4, "containsKeywords": ["ETH", "weekly"] }
+    },
+    {
+      "id": 408,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "Plan a position exit from SOL over 2 weeks if it drops below $130",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 2, "containsKeywords": ["SOL", "exit", "130"] }
+    },
+    {
+      "id": 409,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "帮我做一个BTC定投计划：每周50美元，共8周",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 8, "containsKeywords": ["BTC", "定投"] }
+    },
+    {
+      "id": 410,
+      "level": 2,
+      "category": "cex_plan_as_text",
+      "question": "未来3天分批建仓ETH",
+      "expectedClassification": "CEX_WORKFLOW_MESSAGE",
+      "expectedIsCryptoRelated": true,
+      "expectedPlanShape": { "minSteps": 3, "containsKeywords": ["ETH", "分批"] }
+    }
+  ]
+}

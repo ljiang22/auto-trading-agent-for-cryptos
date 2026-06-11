@@ -1,0 +1,74 @@
+{
+  "test_suite_name": "Binance Action Execution Coverage",
+  "version": "1.0",
+  "description": "Agent-level action invocation and execution coverage for plugin-cex Binance endpoints.",
+  "questions": [
+    {
+      "id": 301,
+      "level": 1,
+      "category": "binance_get_balance_exec",
+      "question": "Using Binance, get my account balances and summarize all non-zero assets only.",
+      "expectedActions": ["get_balance"],
+      "expectActionExecution": true
+    },
+    {
+      "id": 302,
+      "level": 1,
+      "category": "binance_get_orders_open_exec",
+      "question": "Using Binance, fetch my open orders across symbols.",
+      "expectedActions": ["get_orders"],
+      "expectActionExecution": true
+    },
+    {
+      "id": 303,
+      "level": 1,
+      "category": "binance_get_orders_symbol_exec",
+      "question": "Using Binance, fetch my latest BTC-USDT orders with a small limit and include side information.",
+      "expectedActions": ["get_orders"],
+      "expectActionExecution": true
+    },
+    {
+      "id": 304,
+      "level": 2,
+      "category": "binance_get_fills_exec",
+      "question": "Using Binance, fetch my latest fills for BTC-USDT and show time, side, and quantity.",
+      "expectedActions": ["get_fills"],
+      "expectActionExecution": true
+    },
+    {
+      "id": 305,
+      "level": 2,
+      "category": "binance_cancel_order_exec",
+      "question": "Using Binance, cancel order id 123456789 if it exists and report the cancellation result.",
+      "expectedActions": ["cancel_order"],
+      "expectActionExecution": true
+    },
+    {
+      "id": 306,
+      "level": 3,
+      "category": "binance_create_market_quote_exec",
+      "question": "Using Binance, create a BUY market order for BTC-USDT with quote size 1.00 USDT and ask for approval before execution.",
+      "expectedActions": ["create_order"],
+      "expectActionExecution": true,
+      "approvalTemplateKey": "marketQuoteBuy"
+    },
+    {
+      "id": 307,
+      "level": 3,
+      "category": "binance_create_limit_gtc_exec",
+      "question": "Using Binance, place a SELL limit GTC order for BTC-USDT with base size 0.0001 at price 150000 and request approval.",
+      "expectedActions": ["create_order"],
+      "expectActionExecution": true,
+      "approvalTemplateKey": "limitGtcSell"
+    },
+    {
+      "id": 308,
+      "level": 3,
+      "category": "binance_create_stop_limit_exec",
+      "question": "Using Binance, place a BUY stop-limit GTC order for BTC-USDT with base size 0.0001, stop 50000, limit 50500, and request approval.",
+      "expectedActions": ["create_order"],
+      "expectActionExecution": true,
+      "approvalTemplateKey": "stopLimitBuy"
+    }
+  ]
+}

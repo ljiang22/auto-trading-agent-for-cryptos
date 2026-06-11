@@ -1,0 +1,1957 @@
+{
+  "name": "trading-prod-full",
+  "description": "Live Binance BTC-USDT production matrix (~6 USDT). Three rooms + alternating explicit/implicit venue prompts + cancel. WARNING: live writes spend real funds. Teardown runs after suite.",
+  "version": "2.0",
+  "defaults": {
+    "agentName": "CryptoTrader",
+    "roomStrategy": "perRoomGroup",
+    "runTeardown": true,
+    "hooks": [
+      "cexAutoApprove"
+    ],
+    "approvalTemplates": "tests/agent-harness/suites/trading-prod/approval-templates-live-6usdt.json"
+  },
+  "teardown": {
+    "section": "teardown",
+    "steps": [
+      "Resolve venue order_ids for harness create_order cases (get_orders fallback)",
+      "Cancel only harness-placed BTC-USDT spot orders (by order_ids)",
+      "Cancel only harness-placed CROSS / ISOLATED margin orders (by order_ids)",
+      "Verify harness client_order_ids are not still open (spot)",
+      "Verify harness margin client_order_ids have no open positions"
+    ]
+  },
+  "cases": [
+    {
+      "id": "ro-balance",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_balance",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_balance"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Using Binance, show my balances across spot, cross margin, and isolated margin wallets for BTC-USDT and summarize all non-zero assets."
+      }
+    },
+    {
+      "id": "ro-balance-spot",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_balance",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_balance"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "show my spot wallet balances for BTC-USDT and other non-zero assets."
+      }
+    },
+    {
+      "id": "ro-balance-margin-cross",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_balance",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_balance"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Using Binance, show my cross margin wallet balances."
+      }
+    },
+    {
+      "id": "ro-orders",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_orders",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_orders"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "list my open BTC-USDT orders."
+      }
+    },
+    {
+      "id": "ro-orders-margin-cross",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_orders",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_orders"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Using Binance, on cross margin list my open cross margin BTC-USDT orders."
+      }
+    },
+    {
+      "id": "ro-orders-history",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_orders",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_orders"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "show my recent BTC-USDT order history."
+      }
+    },
+    {
+      "id": "ro-fills",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_fills",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_fills"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Using Binance, fetch my recent BTC-USDT trade fills."
+      }
+    },
+    {
+      "id": "ro-fills-by-order",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_fills",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_fills"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "fetch my trade fills for order 12345678901 on BTC-USDT."
+      }
+    },
+    {
+      "id": "ro-ticker",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_ticker",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_ticker"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Using Binance, get the current BTC-USDT ticker price."
+      }
+    },
+    {
+      "id": "ro-orderbook",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_orderbook",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_orderbook"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "show the BTC-USDT order book top of book."
+      }
+    },
+    {
+      "id": "ro-positions",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_positions",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_positions"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Using Binance, show my margin positions for BTC-USDT if any."
+      }
+    },
+    {
+      "id": "ro-pnl",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_pnl",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_pnl"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "summarize my recent realized PnL."
+      }
+    },
+    {
+      "id": "ro-pnl-realized",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_pnl",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_pnl"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Using Binance, summarize my recent realized PnL on BTC-USDT."
+      }
+    },
+    {
+      "id": "ro-trading-mode",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "get_trading_mode",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "get_trading_mode"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "What is my current trading mode?"
+      }
+    },
+    {
+      "id": "ro-asset-lists",
+      "roomGroup": "read_only",
+      "tags": [
+        "read_only",
+        "cex",
+        "list_asset_lists",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "list_asset_lists"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 300000
+      },
+      "message": {
+        "text": "Show my blocked and allowed asset lists for trading."
+      }
+    },
+    {
+      "id": "spot-market_market_ioc",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "market_market_ioc",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_market_market_ioc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "buy $6.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "buy $6.00 of BTC-USDT at market.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-spot-market_market_ioc-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-limit_limit_gtc",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "limit_limit_gtc",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_limit_limit_gtc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtc": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-spot-limit_limit_gtc-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-limit_limit_gtc-postonly",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "limit_limit_gtc",
+        "post_only",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_limit_limit_gtc_sell",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "sell 0.00006 BTC at 100000.00 limit GTC on BTC-USDT post-only."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "sell 0.00006 BTC at 100000.00 limit GTC on BTC-USDT post-only.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "SELL",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtc": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00",
+              "post_only": true
+            }
+          },
+          "client_order_id": "harness-spot-limit_limit_gtc-postonly-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-limit_limit_fok",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "limit_limit_fok",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_limit_limit_fok_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, buy 0.00006 BTC at 100000.00 limit FOK on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, buy 0.00006 BTC at 100000.00 limit FOK on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_fok": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-spot-limit_limit_fok-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-limit_limit_gtd",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "limit_limit_gtd",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_limit_limit_gtd_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "buy 0.00006 BTC at 100000.00 limit GTD on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "buy 0.00006 BTC at 100000.00 limit GTD on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtd": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00",
+              "end_time": "2026-06-12T20:26:57.576Z"
+            }
+          },
+          "client_order_id": "harness-spot-limit_limit_gtd-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-stop_limit_stop_limit_gtc",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "stop_limit_stop_limit_gtc",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_stop_limit_stop_limit_gtc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTC."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTC.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "stop_limit_stop_limit_gtc": {
+              "base_size": "0.00006",
+              "stop_price": "100000.00",
+              "limit_price": "100100.00"
+            }
+          },
+          "client_order_id": "harness-spot-stop_limit_stop_limit_gtc-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-stop_limit_stop_limit_gtd",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "stop_limit_stop_limit_gtd",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_stop_limit_stop_limit_gtd_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTD."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTD.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "stop_limit_stop_limit_gtd": {
+              "base_size": "0.00006",
+              "stop_price": "100000.00",
+              "limit_price": "100100.00",
+              "end_time": "2026-06-12T20:26:57.576Z"
+            }
+          },
+          "client_order_id": "harness-spot-stop_limit_stop_limit_gtd-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-trailing_stop_limit_gtc",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "trailing_stop_limit_gtc",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_trailing_stop_limit_gtc_sell",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, sell 0.00006 BTC trailing stop-limit on BTC-USDT activation 100000.00 100bps."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, sell 0.00006 BTC trailing stop-limit on BTC-USDT activation 100000.00 100bps.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "SELL",
+          "mode": "live",
+          "order_configuration": {
+            "trailing_stop_limit_gtc": {
+              "base_size": "0.00006",
+              "trailing_delta_bps": 100,
+              "activation_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-spot-trailing_stop_limit_gtc-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-oco_gtc",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "write",
+        "live",
+        "oco_gtc",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "spot_oco_gtc_sell",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "sell 0.00006 BTC OCO on BTC-USDT take-profit 100000.00 stop-loss 100000.00/99900.00."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "sell 0.00006 BTC OCO on BTC-USDT take-profit 100000.00 stop-loss 100000.00/99900.00.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "SELL",
+          "mode": "live",
+          "order_configuration": {
+            "oco_gtc": {
+              "base_size": "0.00006",
+              "above_limit_price": "100000.00",
+              "below_stop_price": "100000.00",
+              "below_limit_price": "99900.00"
+            }
+          },
+          "client_order_id": "harness-spot-oco_gtc-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-unsupported-market_market_fok",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "negative",
+        "unsupported",
+        "market_market_fok",
+        "explicit_venue"
+      ],
+      "expect": {
+        "unsupportedVariant": true,
+        "pass": false,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "Using Binance, buy $6.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, buy $6.00 of BTC-USDT at market.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_fok": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-spot-unsupported-market_market_fok-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-unsupported-sor_limit_ioc",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "negative",
+        "unsupported",
+        "sor_limit_ioc",
+        "implicit_venue"
+      ],
+      "expect": {
+        "unsupportedVariant": true,
+        "pass": false,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "buy 0.00006 BTC at 100000.00 limit IOC on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "buy 0.00006 BTC at 100000.00 limit IOC on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "sor_limit_ioc": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-spot-unsupported-sor_limit_ioc-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-unsupported-trigger_bracket_gtc",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "negative",
+        "unsupported",
+        "trigger_bracket_gtc",
+        "explicit_venue"
+      ],
+      "expect": {
+        "unsupportedVariant": true,
+        "pass": false,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "Using Binance, buy BTC-USDT bracket take-profit 100000.00 stop trigger 100000.00 GTC."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, buy BTC-USDT bracket take-profit 100000.00 stop trigger 100000.00 GTC.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "trigger_bracket_gtc": {
+              "limit_price": "100000.00",
+              "stop_trigger_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-spot-unsupported-trigger_bracket_gtc-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-unsupported-trigger_bracket_gtd",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "negative",
+        "unsupported",
+        "trigger_bracket_gtd",
+        "implicit_venue"
+      ],
+      "expect": {
+        "unsupportedVariant": true,
+        "pass": false,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "buy BTC-USDT bracket take-profit 100000.00 stop trigger 100000.00 GTD."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "buy BTC-USDT bracket take-profit 100000.00 stop trigger 100000.00 GTD.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "trigger_bracket_gtd": {
+              "limit_price": "100000.00",
+              "stop_trigger_price": "100000.00",
+              "end_time": "2026-06-12T20:26:57.576Z"
+            }
+          },
+          "client_order_id": "harness-spot-unsupported-trigger_bracket_gtd-1780691217576"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-market_market_ioc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "market_market_ioc",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_market_market_ioc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, on cross margin buy $6.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, on cross margin buy $6.00 of BTC-USDT at market.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-margin-cross-market_market_ioc-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-limit_limit_gtc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "limit_limit_gtc",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_limit_limit_gtc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "on cross margin buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "on cross margin buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtc": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-margin-cross-limit_limit_gtc-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-stop_limit_stop_limit_gtc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "stop_limit_stop_limit_gtc",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_stop_limit_stop_limit_gtc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, on cross margin buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTC."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, on cross margin buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTC.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "stop_limit_stop_limit_gtc": {
+              "base_size": "0.00006",
+              "stop_price": "100000.00",
+              "limit_price": "100100.00"
+            }
+          },
+          "client_order_id": "harness-margin-cross-stop_limit_stop_limit_gtc-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-limit_limit_fok",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "limit_limit_fok",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_limit_limit_fok_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "on cross margin buy 0.00006 BTC at 100000.00 limit FOK on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "on cross margin buy 0.00006 BTC at 100000.00 limit FOK on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_fok": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-margin-cross-limit_limit_fok-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-limit_limit_gtd",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "limit_limit_gtd",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_limit_limit_gtd_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, on cross margin buy 0.00006 BTC at 100000.00 limit GTD on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, on cross margin buy 0.00006 BTC at 100000.00 limit GTD on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtd": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00",
+              "end_time": "2026-06-12T20:26:57.576Z"
+            }
+          },
+          "client_order_id": "harness-margin-cross-limit_limit_gtd-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-trailing_stop_limit_gtc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "trailing_stop_limit_gtc",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_trailing_stop_limit_gtc_sell",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "on cross margin sell 0.00006 BTC trailing stop-limit on BTC-USDT activation 100000.00 100bps."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "on cross margin sell 0.00006 BTC trailing stop-limit on BTC-USDT activation 100000.00 100bps.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "SELL",
+          "mode": "live",
+          "order_configuration": {
+            "trailing_stop_limit_gtc": {
+              "base_size": "0.00006",
+              "trailing_delta_bps": 100,
+              "activation_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-margin-cross-trailing_stop_limit_gtc-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-oco_gtc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "oco_gtc",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_oco_gtc_sell",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, on cross margin sell 0.00006 BTC OCO on BTC-USDT take-profit 100000.00 stop-loss 100000.00/99900.00."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, on cross margin sell 0.00006 BTC OCO on BTC-USDT take-profit 100000.00 stop-loss 100000.00/99900.00.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "SELL",
+          "mode": "live",
+          "order_configuration": {
+            "oco_gtc": {
+              "base_size": "0.00006",
+              "above_limit_price": "100000.00",
+              "below_stop_price": "100000.00",
+              "below_limit_price": "99900.00"
+            }
+          },
+          "client_order_id": "harness-margin-cross-oco_gtc-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-isolated-market_market_ioc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "isolated",
+        "write",
+        "live",
+        "market_market_ioc",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_isolated_market_market_ioc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "on isolated margin buy $6.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "on isolated margin buy $6.00 of BTC-USDT at market.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-margin-isolated-market_market_ioc-1780691217576",
+          "margin_type": "ISOLATED",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-isolated-limit_limit_gtc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "isolated",
+        "write",
+        "live",
+        "limit_limit_gtc",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_isolated_limit_limit_gtc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, on isolated margin buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, on isolated margin buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtc": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-margin-isolated-limit_limit_gtc-1780691217576",
+          "margin_type": "ISOLATED",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-isolated-stop_limit_stop_limit_gtc",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "isolated",
+        "write",
+        "live",
+        "stop_limit_stop_limit_gtc",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_isolated_stop_limit_stop_limit_gtc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "on isolated margin buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTC."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "on isolated margin buy 0.00006 BTC stop-limit on BTC-USDT stop 100000.00 limit 100100.00 GTC.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "stop_limit_stop_limit_gtc": {
+              "base_size": "0.00006",
+              "stop_price": "100000.00",
+              "limit_price": "100100.00"
+            }
+          },
+          "client_order_id": "harness-margin-isolated-stop_limit_stop_limit_gtc-1780691217576",
+          "margin_type": "ISOLATED",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-isolated-limit_limit_gtc-postonly",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "isolated",
+        "write",
+        "live",
+        "post_only",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_isolated_limit_limit_gtc_sell",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, on isolated margin sell 0.00006 BTC at 100000.00 limit GTC on BTC-USDT post-only."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, on isolated margin sell 0.00006 BTC at 100000.00 limit GTC on BTC-USDT post-only.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "SELL",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtc": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00",
+              "post_only": true
+            }
+          },
+          "client_order_id": "harness-margin-isolated-limit_limit_gtc-postonly-1780691217576",
+          "margin_type": "ISOLATED",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-cross-auto-borrow",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "cross",
+        "write",
+        "live",
+        "auto_borrow",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 300000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "margin_cross_market_market_ioc_buy",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "on cross margin with auto-borrow buy $6.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "on cross margin with auto-borrow buy $6.00 of BTC-USDT at market.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-margin-cross-auto-borrow-1780691217576",
+          "margin_type": "CROSS",
+          "margin_action": "AUTO_BORROW"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "preview-spot-market",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "preview",
+        "read_only_stake",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "preview_order"
+        ],
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, preview buy $6.00 of BTC-USDT at market and estimate fees."
+      },
+      "compose": {
+        "action": "preview_order",
+        "previewText": "Using Binance, preview buy $6.00 of BTC-USDT at market and estimate fees.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-preview-spot-market-1780691217577"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "amend-spot-limit",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "amend",
+        "write",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "amend_order"
+        ],
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "amend order 12345678901 on BTC-USDT to limit 51000."
+      },
+      "compose": {
+        "action": "amend_order",
+        "previewText": "amend order 12345678901 on BTC-USDT to limit 51000.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "mode": "live",
+          "orderId": "12345678901",
+          "price": "51000"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "cancel-by-ids",
+      "roomGroup": "spot",
+      "tags": [
+        "cancel",
+        "write",
+        "live",
+        "by_ids",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "cancel_order"
+        ],
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, cancel BTC-USDT orders 12345678901, 12345678902."
+      },
+      "compose": {
+        "action": "cancel_order",
+        "previewText": "Using Binance, cancel BTC-USDT orders 12345678901, 12345678902.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "mode": "live",
+          "all_open": false,
+          "order_ids": [
+            "12345678901",
+            "12345678902"
+          ]
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "cancel-nl",
+      "roomGroup": "spot",
+      "tags": [
+        "cancel",
+        "write",
+        "live",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "cancel_order"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "cancel_all_open_btc",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "cancel all open BTC-USDT orders."
+      }
+    },
+    {
+      "id": "cancel-compose-all-open",
+      "roomGroup": "spot",
+      "tags": [
+        "cancel",
+        "write",
+        "live",
+        "compose",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "cancel_order"
+        ],
+        "expectActionExecution": true,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "approvalTemplateKey": "cancel_all_open_btc",
+      "approvalFormat": "dialog",
+      "message": {
+        "text": "Using Binance, cancel all open BTC-USDT orders."
+      },
+      "compose": {
+        "action": "cancel_order",
+        "previewText": "Using Binance, cancel all open BTC-USDT orders.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "mode": "live",
+          "all_open": true,
+          "order_ids": []
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "spot-reject-l1",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "rejection",
+        "approval",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "approvalRejected": true,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoReject"
+      ],
+      "approvalTemplateKey": "spot_market_market_ioc_buy",
+      "approvalDecision": "rejected",
+      "message": {
+        "text": "buy $6.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "buy $6.00 of BTC-USDT at market.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-spot-reject-l1-1780691217577"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "margin-reject-l1",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "rejection",
+        "approval",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "approvalRejected": true,
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoReject"
+      ],
+      "approvalTemplateKey": "margin_cross_limit_limit_gtc_buy",
+      "approvalDecision": "rejected",
+      "message": {
+        "text": "Using Binance, on cross margin buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "Using Binance, on cross margin buy 0.00006 BTC at 100000.00 limit GTC on BTC-USDT.",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtc": {
+              "base_size": "0.00006",
+              "limit_price": "100000.00"
+            }
+          },
+          "client_order_id": "harness-margin-reject-l1-1780691217577",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "risk-max-order-size",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "risk_deny",
+        "maxOrderSize",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "riskDecision": "deny",
+        "riskDecisionOptional": true,
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "buy $2000.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "2000.00"
+            }
+          },
+          "client_order_id": "harness-risk-max-size"
+        },
+        "previewText": "buy $2000.00 of BTC-USDT at market.",
+        "preApproved": false
+      }
+    },
+    {
+      "id": "risk-asset-allowlist",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "risk_deny",
+        "assetAllowlist",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "riskDecision": "deny",
+        "riskDecisionOptional": true,
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "Using Binance, buy $6.00 of LUNA-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "params": {
+          "exchange": "binance",
+          "product_id": "LUNA-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-risk-luna"
+        },
+        "previewText": "Using Binance, buy $6.00 of LUNA-USDT at market.",
+        "preApproved": false
+      }
+    },
+    {
+      "id": "risk-min-order-size",
+      "roomGroup": "spot",
+      "tags": [
+        "spot",
+        "risk_deny",
+        "minOrderSize",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "riskDecision": "deny",
+        "riskDecisionOptional": true,
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "buy 0 BTC at 50000 limit GTC on BTC-USDT."
+      },
+      "compose": {
+        "action": "create_order",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "order_configuration": {
+            "limit_limit_gtc": {
+              "base_size": "0",
+              "limit_price": "50000"
+            }
+          },
+          "client_order_id": "harness-risk-min-size"
+        },
+        "previewText": "buy 0 BTC at 50000 limit GTC on BTC-USDT.",
+        "preApproved": false
+      }
+    },
+    {
+      "id": "risk-leverage-cap",
+      "roomGroup": "margin",
+      "tags": [
+        "margin",
+        "risk_deny",
+        "leverageCap",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "riskDecision": "deny",
+        "riskDecisionOptional": true,
+        "stepsInclude": [
+          "Trading: risk check"
+        ],
+        "maxDurationMs": 180000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "Using Binance, at 20x leverage on cross margin buy $6.00 of BTC-USDT at market."
+      },
+      "compose": {
+        "action": "create_order",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "mode": "live",
+          "margin_type": "CROSS",
+          "margin_action": "NORMAL",
+          "leverage": "20",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "6.00"
+            }
+          },
+          "client_order_id": "harness-risk-leverage"
+        },
+        "previewText": "Using Binance, at 20x leverage on cross margin buy $6.00 of BTC-USDT at market.",
+        "preApproved": false
+      }
+    },
+    {
+      "id": "set-trading-mode-paper",
+      "roomGroup": "read_only",
+      "tags": [
+        "trading_mode",
+        "write",
+        "set_mode",
+        "write_stake",
+        "implicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "set_trading_mode"
+        ],
+        "maxDurationMs": 120000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "switch my trading mode to paper."
+      },
+      "compose": {
+        "action": "set_trading_mode",
+        "previewText": "switch my trading mode to paper.",
+        "params": {
+          "mode": "paper"
+        },
+        "preApproved": false
+      }
+    },
+    {
+      "id": "set-trading-mode-live",
+      "roomGroup": "read_only",
+      "tags": [
+        "trading_mode",
+        "write",
+        "set_mode",
+        "restore",
+        "write_stake",
+        "explicit_venue"
+      ],
+      "expect": {
+        "expectedActions": [
+          "set_trading_mode"
+        ],
+        "maxDurationMs": 120000
+      },
+      "hooks": [
+        "cexAutoApprove"
+      ],
+      "message": {
+        "text": "Using Binance, switch my trading mode to live."
+      },
+      "compose": {
+        "action": "set_trading_mode",
+        "previewText": "Using Binance, switch my trading mode to live.",
+        "params": {
+          "mode": "live"
+        },
+        "preApproved": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "example-compose",
+  "description": "Structured compose payload (F10). Use paper mode in prod; suite owns safety — not the harness.",
+  "defaults": {
+    "agentName": "Crypto Trader",
+    "roomStrategy": "perCase",
+    "hooks": ["cexAutoApprove"],
+    "approvalTemplates": "tests/questions/binance_endpoint_approval_templates.json"
+  },
+  "cases": [
+    {
+      "id": "compose-market-quote-buy",
+      "tags": ["cex", "compose", "write"],
+      "message": {
+        "text": "paper mode: place a small market buy on Binance for testing"
+      },
+      "compose": {
+        "action": "create_order",
+        "previewText": "paper mode: place a small market buy on Binance for testing",
+        "params": {
+          "exchange": "binance",
+          "product_id": "BTC-USDT",
+          "side": "BUY",
+          "order_configuration": {
+            "market_market_ioc": {
+              "quote_size": "1.00"
+            }
+          },
+          "mode": "paper"
+        },
+        "preApproved": false
+      },
+      "approvalTemplateKey": "marketQuoteBuy",
+      "expect": {
+        "stepsInclude": ["Trading: risk check"],
+        "maxDurationMs": 300000
+      }
+    }
+  ]
+}

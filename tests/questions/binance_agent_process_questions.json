@@ -1,0 +1,43 @@
+{
+  "test_suite_name": "Binance Agent Process Coverage",
+  "version": "1.0",
+  "description": "Agent-process focused Binance action prompts for balances, orders, fills, cancel, and create-order intents.",
+  "questions": [
+    {
+      "id": 101,
+      "level": 1,
+      "category": "binance_get_balance",
+      "question": "Using Binance, fetch my current account balances and summarize non-zero assets."
+    },
+    {
+      "id": 102,
+      "level": 1,
+      "category": "binance_get_orders_open",
+      "question": "Using Binance, list my current open orders."
+    },
+    {
+      "id": 103,
+      "level": 2,
+      "category": "binance_get_orders_filtered",
+      "question": "Using Binance, fetch recent BTC-USDT orders with SELL side only and a small limit."
+    },
+    {
+      "id": 104,
+      "level": 2,
+      "category": "binance_get_fills",
+      "question": "Using Binance, fetch my latest fills for BTC-USDT."
+    },
+    {
+      "id": 105,
+      "level": 3,
+      "category": "binance_cancel_order",
+      "question": "Using Binance, cancel this order if it exists: 123456789."
+    },
+    {
+      "id": 106,
+      "level": 3,
+      "category": "binance_create_order_low_notional",
+      "question": "Using Binance, prepare a BUY market order for BTC-USDT using quote size of 0.50 to 1.00 USD equivalent and ask for approval before execution."
+    }
+  ]
+}

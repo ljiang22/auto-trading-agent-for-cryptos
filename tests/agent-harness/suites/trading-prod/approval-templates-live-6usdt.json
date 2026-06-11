@@ -1,0 +1,103 @@
+{
+  "description": "Live 6 USDT approval templates for production trading-prod harness (BTC-USDT only).",
+  "defaults": {
+    "decision": "approved",
+    "feedback": "Approved for live 6 USDT harness test."
+  },
+  "confirmationLevel1": {
+    "decision": "approved",
+    "feedback": "L1 approved."
+  },
+  "confirmationLevel2": {
+    "decision": "approved",
+    "feedback": "L2 final confirm approved."
+  },
+  "rejectionTemplate": {
+    "decision": "rejected",
+    "feedback": "Rejected by harness operator."
+  },
+  "cancel_all_open_btc": {
+    "decision": "approved",
+    "feedback": "Approve cancel all open BTC-USDT orders (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_market_market_ioc_buy": {
+    "decision": "approved",
+    "feedback": "Approve spot_market_market_ioc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_limit_limit_gtc_buy": {
+    "decision": "approved",
+    "feedback": "Approve spot_limit_limit_gtc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_limit_limit_gtc_sell": {
+    "decision": "approved",
+    "feedback": "Approve spot_limit_limit_gtc_sell (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_limit_limit_fok_buy": {
+    "decision": "approved",
+    "feedback": "Approve spot_limit_limit_fok_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_limit_limit_gtd_buy": {
+    "decision": "approved",
+    "feedback": "Approve spot_limit_limit_gtd_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_stop_limit_stop_limit_gtc_buy": {
+    "decision": "approved",
+    "feedback": "Approve spot_stop_limit_stop_limit_gtc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_stop_limit_stop_limit_gtd_buy": {
+    "decision": "approved",
+    "feedback": "Approve spot_stop_limit_stop_limit_gtd_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_trailing_stop_limit_gtc_sell": {
+    "decision": "approved",
+    "feedback": "Approve spot_trailing_stop_limit_gtc_sell (dialog-format: parameters from SSE interrupt)."
+  },
+  "spot_oco_gtc_sell": {
+    "decision": "approved",
+    "feedback": "Approve spot_oco_gtc_sell (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_cross_market_market_ioc_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_cross_market_market_ioc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_cross_limit_limit_gtc_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_cross_limit_limit_gtc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_cross_stop_limit_stop_limit_gtc_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_cross_stop_limit_stop_limit_gtc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_cross_limit_limit_fok_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_cross_limit_limit_fok_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_cross_limit_limit_gtd_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_cross_limit_limit_gtd_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_cross_trailing_stop_limit_gtc_sell": {
+    "decision": "approved",
+    "feedback": "Approve margin_cross_trailing_stop_limit_gtc_sell (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_cross_oco_gtc_sell": {
+    "decision": "approved",
+    "feedback": "Approve margin_cross_oco_gtc_sell (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_isolated_market_market_ioc_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_isolated_market_market_ioc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_isolated_limit_limit_gtc_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_isolated_limit_limit_gtc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_isolated_stop_limit_stop_limit_gtc_buy": {
+    "decision": "approved",
+    "feedback": "Approve margin_isolated_stop_limit_stop_limit_gtc_buy (dialog-format: parameters from SSE interrupt)."
+  },
+  "margin_isolated_limit_limit_gtc_sell": {
+    "decision": "approved",
+    "feedback": "Approve margin_isolated_limit_limit_gtc_sell (dialog-format: parameters from SSE interrupt)."
+  }
+}

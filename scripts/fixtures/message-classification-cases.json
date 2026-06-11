@@ -1,0 +1,745 @@
+{
+    "description": "100 natural-language classification cases covering REGULAR_MESSAGE, CEX_WORKFLOW_MESSAGE, TASK_CHAIN_MESSAGE, and COMPREHENSIVE_ANALYSIS_MESSAGE.",
+    "cases": [
+        {
+            "id": "reg-01",
+            "label": "BTC price check",
+            "text": "What is the current price of Bitcoin?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-02",
+            "label": "ETH 24h move",
+            "text": "Show me Ethereum's 24-hour price change.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-03",
+            "label": "SOL news headline summary",
+            "text": "Summarize the latest Solana news headlines for me.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-04",
+            "label": "Fear and Greed today",
+            "text": "What does the crypto Fear and Greed Index say today?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-05",
+            "label": "DOGE volume today",
+            "text": "Show me DOGE trading volume for today.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-06",
+            "label": "XRP market cap",
+            "text": "What is XRP's market cap right now?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-07",
+            "label": "Explain ETH staking",
+            "text": "Explain Ethereum staking in one short paragraph.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-08",
+            "label": "AVAX price",
+            "text": "Give me the latest AVAX price.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-09",
+            "label": "LTC up or down",
+            "text": "Is Litecoin up or down today?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-10",
+            "label": "ETH gas fees",
+            "text": "What is the current gas price on Ethereum?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-11",
+            "label": "BTC daily RSI",
+            "text": "What does the daily RSI on BTC look like right now?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-12",
+            "label": "BTC perpetual funding rate",
+            "text": "Pull the current funding rate for BTC-PERP.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-13",
+            "label": "ADA price",
+            "text": "What's the latest price of ADA?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-14",
+            "label": "BNB headline",
+            "text": "Give me today's top headline about BNB.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-15",
+            "label": "LINK price",
+            "text": "What is the current price of Chainlink?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-16",
+            "label": "ETH hourly move",
+            "text": "How much did ETH move in the last hour?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-17",
+            "label": "Explain market cap",
+            "text": "What does market cap mean in crypto?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-18",
+            "label": "Bitcoin dominance",
+            "text": "Show me Bitcoin dominance right now.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-19",
+            "label": "Current gas price",
+            "text": "Give me the current Ethereum gas fee level only.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-20",
+            "label": "Fear and Greed value only",
+            "text": "Give me the current Fear and Greed value only.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-21",
+            "label": "TON price action",
+            "text": "What's happening with TON price today?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-22",
+            "label": "Explain stop-loss",
+            "text": "Explain what a stop-loss is in crypto trading.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-23",
+            "label": "SOL 24h volume",
+            "text": "Show the last 24-hour trading volume for SOL.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-24",
+            "label": "BTC above MA20",
+            "text": "Is BTC above or below its 20-day moving average right now?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-25",
+            "label": "ETH ETF quick summary",
+            "text": "Give me a quick summary of today's Ethereum ETF news.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "trd-01",
+            "label": "Market buy BTC on Binance",
+            "text": "Buy 0.02 BTC on Binance at market.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-02",
+            "label": "Limit sell ETH on OKX",
+            "text": "Place a limit sell for 5 ETH on OKX at 4200.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-03",
+            "label": "Cancel Bybit order",
+            "text": "Cancel my Bybit order ABC-789.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-04",
+            "label": "Open BTC short",
+            "text": "Open a short on BTC-PERP on OKX with 0.5 BTC size.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-05",
+            "label": "Close ETH perp position",
+            "text": "Close my ETH-PERP position on Bybit.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-06",
+            "label": "Set BTC stop-loss",
+            "text": "Put in a stop-loss order for BTC at 58000 on Binance.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-07",
+            "label": "Buy SOL with quote amount",
+            "text": "Buy 1000 USDT worth of SOL on Binance.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-08",
+            "label": "Sell XRP on OKX",
+            "text": "Sell 2500 XRP on OKX.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-09",
+            "label": "Limit buy AVAX",
+            "text": "Place a limit buy for 10 AVAX at 32 on Bybit.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-10",
+            "label": "Cancel all BTC orders",
+            "text": "Cancel all open BTC/USDT orders on Binance.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-11",
+            "label": "Set BTC take profit",
+            "text": "Set a take-profit sell for 1 BTC at 70000 on OKX.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-12",
+            "label": "Open ETH long",
+            "text": "Open a long on ETH-PERP with a market order on Bybit.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-13",
+            "label": "Reduce SOL position",
+            "text": "Reduce my SOL-PERP position by 25% on OKX.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-14",
+            "label": "IOC BTC buy order",
+            "text": "Place an IOC buy order for 0.1 BTC at 60000 on Binance.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-15",
+            "label": "Buy DOGE now",
+            "text": "Buy 500 DOGE right now on Binance.",
+            "expected": "CEX_WORKFLOW_MESSAGE"
+        },
+        {
+            "id": "trd-16",
+            "label": "Continuation exchange reply",
+            "text": "Use Binance spot.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "I want to buy some BTC."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "Sure. Which exchange should I use for the order?"
+                }
+            ]
+        },
+        {
+            "id": "trd-17",
+            "label": "Continuation symbol reply",
+            "text": "Let's use BTC/USDT.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "I want to buy BTC on Binance."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "Which trading pair should I use?"
+                }
+            ]
+        },
+        {
+            "id": "trd-18",
+            "label": "Continuation side reply",
+            "text": "Make it a buy order.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "I want to trade ETH-PERP on OKX."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "Should this be a buy or a sell?"
+                }
+            ]
+        },
+        {
+            "id": "trd-19",
+            "label": "Continuation quantity reply",
+            "text": "I want 0.05 BTC.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "Buy BTC/USDT on Binance."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "How much would you like to buy?"
+                }
+            ]
+        },
+        {
+            "id": "trd-20",
+            "label": "Continuation order type reply",
+            "text": "Go with a limit order at 59800.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "Buy 0.05 BTC on Binance."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "Do you want a market or limit order?"
+                }
+            ]
+        },
+        {
+            "id": "trd-21",
+            "label": "Continuation limit price reply",
+            "text": "Set the limit price to 60150.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "Buy BTC/USDT on Binance with a limit order."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "What limit price would you like to use?"
+                }
+            ]
+        },
+        {
+            "id": "trd-22",
+            "label": "Continuation time in force reply",
+            "text": "Use GTC for that order.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "Place a limit buy for BTC/USDT on Binance."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "What time-in-force should I use: GTC, IOC, or FOK?"
+                }
+            ]
+        },
+        {
+            "id": "trd-23",
+            "label": "Continuation stop-loss reply",
+            "text": "Set the stop-loss at 57500.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "I want to buy BTC on Binance and add risk protection."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "What stop-loss price should I set?"
+                }
+            ]
+        },
+        {
+            "id": "trd-24",
+            "label": "Continuation confirmation reply",
+            "text": "Yes, place it.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "Buy 0.05 BTC on Binance with a limit order at 60000."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "Ready to place the order. Do you want me to proceed?"
+                }
+            ]
+        },
+        {
+            "id": "trd-25",
+            "label": "Continuation order id reply",
+            "text": "The order ID is ABC-789.",
+            "expected": "CEX_WORKFLOW_MESSAGE",
+            "context": [
+                {
+                    "speaker": "user",
+                    "text": "I need to cancel an order on Bybit."
+                },
+                {
+                    "speaker": "agent",
+                    "source": "cex_workflow",
+                    "text": "Please share the order ID you want to cancel."
+                }
+            ]
+        },
+        {
+            "id": "task-01",
+            "label": "Compare BTC and ETH momentum",
+            "text": "Compare BTC and ETH momentum today and tell me which looks stronger.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-02",
+            "label": "BTC multi-signal outlook",
+            "text": "Analyze BTC price action, on-chain activity, and sentiment for the next 24 hours.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-03",
+            "label": "Rank SOL AVAX SUI",
+            "text": "Compare SOL, AVAX, and SUI and rank them by short-term strength.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-04",
+            "label": "BTC news and price action",
+            "text": "Look at BTC news plus price action and tell me the likely intraday direction.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-05",
+            "label": "BTC vs gold",
+            "text": "Compare BTC and gold as stores of value using current market data.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-06",
+            "label": "Swing setup review",
+            "text": "Review ETH, SOL, and BNB and suggest which has the best swing-trade setup.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-07",
+            "label": "BTC price funding liquidations",
+            "text": "Track BTC price, funding, and liquidation data and summarize what it means.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-08",
+            "label": "BTC ETH news impact",
+            "text": "Compare the latest news impact on BTC and ETH and tell me which is more vulnerable.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-09",
+            "label": "Top 10 momentum screen",
+            "text": "Screen the top 10 coins and identify the three with the strongest momentum.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-10",
+            "label": "BTC ETH SOL correlation",
+            "text": "Analyze BTC, ETH, and SOL correlation over the last month.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-11",
+            "label": "ETF flows vs BTC price",
+            "text": "Compare Bitcoin spot ETF flows with BTC price action and sentiment.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-12",
+            "label": "ETH chain flows plus derivatives",
+            "text": "Review on-chain activity, exchange flows, and derivatives positioning for ETH.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-13",
+            "label": "Meme coin comparison",
+            "text": "Compare DOGE, SHIB, and PEPE across volume, sentiment, and volatility.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-14",
+            "label": "BTC and ETH support resistance",
+            "text": "Check BTC support and resistance and compare it with ETH support and resistance.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-15",
+            "label": "SOL relative performance",
+            "text": "Analyze whether SOL is outperforming BTC and ETH across multiple timeframes.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-16",
+            "label": "Fear and Greed plus dominance",
+            "text": "Compare current Fear and Greed, BTC dominance, and altcoin performance.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-17",
+            "label": "BTC chart macro ETF flows",
+            "text": "Look at BTC chart structure, macro headlines, and ETF flows and give me a short outlook.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-18",
+            "label": "XRP ADA LINK comparison",
+            "text": "Compare XRP, ADA, and LINK for relative strength and catalyst risk.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-19",
+            "label": "BTC order book plus OI",
+            "text": "Analyze BTC order book pressure together with perpetual funding and open interest.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-20",
+            "label": "Layer 2 ranking",
+            "text": "Compare Ethereum Layer 2 tokens and identify which two deserve more research today.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-21",
+            "label": "BTC ETH whale plus sentiment",
+            "text": "Review BTC and ETH whale activity plus social sentiment.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-22",
+            "label": "TON and NEAR multi-factor",
+            "text": "Compare recent news, on-chain usage, and price action for TON and NEAR.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-23",
+            "label": "Build three-coin watchlist",
+            "text": "Build a short watchlist of three coins with bullish setups based on trend and volume.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-24",
+            "label": "Drawdown risk comparison",
+            "text": "Compare BTC, ETH, and SOL drawdown risk if market sentiment weakens.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "task-25",
+            "label": "Altseason evaluation",
+            "text": "Evaluate whether altcoin season is starting using BTC dominance, ETH/BTC, and top alt performance.",
+            "expected": "TASK_CHAIN_MESSAGE"
+        },
+        {
+            "id": "comp-01",
+            "label": "Comprehensive BTC analysis",
+            "text": "Create a comprehensive BTC market analysis covering price action, on-chain data, sentiment, and risk.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-02",
+            "label": "Full ETH investment memo",
+            "text": "Write a full investment memo on ETH for a medium-term investor.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-03",
+            "label": "Detailed SOL report",
+            "text": "Generate a detailed research report on SOL including catalysts, adoption, valuation, and risks.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-04",
+            "label": "Full market report",
+            "text": "Prepare a comprehensive crypto market report for BTC, ETH, and SOL with clear conclusions.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-05",
+            "label": "Bitcoin deep dive",
+            "text": "Give me a deep-dive analysis of Bitcoin for the next 1 to 3 months.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-06",
+            "label": "ETH for institutions report",
+            "text": "Create a full report on whether Ethereum is attractive to institutions right now.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-07",
+            "label": "Weekly market report",
+            "text": "Produce a complete crypto market outlook for this week with sections and recommendations.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-08",
+            "label": "BTC risk report",
+            "text": "Build a comprehensive risk report for holding BTC over the next quarter.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-09",
+            "label": "BTC vs ETH research report",
+            "text": "Generate a detailed comparative research report on BTC versus ETH for portfolio allocation.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-10",
+            "label": "LINK due diligence",
+            "text": "Write a full due-diligence report on Chainlink.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-11",
+            "label": "Altcoin cycle report",
+            "text": "Create a comprehensive report on the current altcoin market cycle.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-12",
+            "label": "Institutional SOL note",
+            "text": "Prepare an institutional-style research note on SOL.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-13",
+            "label": "AVAX fundamental plus technical report",
+            "text": "Give me a full fundamental and technical analysis report for AVAX.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-14",
+            "label": "XRP deep research brief",
+            "text": "Produce a deep research brief on XRP including regulatory risk.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-15",
+            "label": "Portfolio strategy report",
+            "text": "Create a comprehensive portfolio strategy report using BTC, ETH, SOL, and stablecoins.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-16",
+            "label": "Bull and bear case report",
+            "text": "Write a detailed bull-versus-bear case report for Bitcoin.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-17",
+            "label": "Meme coin intelligence report",
+            "text": "Generate a complete market intelligence report on meme coins this month.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-18",
+            "label": "ETH perp full risk report",
+            "text": "Prepare a full trading and risk report for ETH-PERP conditions right now.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-19",
+            "label": "BTC scenario analysis",
+            "text": "Build a comprehensive scenario analysis for BTC if ETF inflows slow down.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-20",
+            "label": "Investment committee memo",
+            "text": "Create a detailed investment committee memo on whether to buy ETH now.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-21",
+            "label": "BNB research report",
+            "text": "Write a full research report on BNB including exchange dependency risk.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-22",
+            "label": "DeFi sector outlook",
+            "text": "Generate a comprehensive outlook on DeFi tokens with key drivers and threats.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-23",
+            "label": "Altcoins vs BTC report",
+            "text": "Prepare a long-form report on whether altcoins are likely to outperform BTC this quarter.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-24",
+            "label": "Macro plus crypto report",
+            "text": "Create a detailed macro-plus-crypto report linking interest rates, dollar strength, and BTC.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "comp-25",
+            "label": "Institutional dashboard summary",
+            "text": "Build a comprehensive institutional dashboard summary for the crypto market today.",
+            "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE"
+        },
+        {
+            "id": "reg-26",
+            "label": "Stocks options trading question",
+            "text": "Should I trade Tesla options this week?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-27",
+            "label": "Forex trading strategy",
+            "text": "Give me a forex EUR/USD scalping strategy.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-28",
+            "label": "Commodities futures trading",
+            "text": "What's the best way to trade gold futures this month?",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-29",
+            "label": "Non-crypto app stock trade",
+            "text": "Help me place a stock trade on Robinhood.",
+            "expected": "REGULAR_MESSAGE"
+        },
+        {
+            "id": "reg-30",
+            "label": "Ambiguous options trading",
+            "text": "Is options gamma squeeze trading profitable this month?",
+            "expected": "REGULAR_MESSAGE"
+        }
+    ]
+}

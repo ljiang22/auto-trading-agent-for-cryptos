@@ -1,0 +1,8 @@
+{
+  "app": "npx ts-node --prefer-ts-exts bin/app.ts",
+  "context": {
+    "env": "staging",
+    "@aws-cdk/aws-cloudwatch-actions:changeAlarmActionToSnsTopic": true,
+    "@aws-cdk/core:newStyleStackSynthesis": true
+  }
+}

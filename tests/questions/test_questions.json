@@ -1,0 +1,127 @@
+{
+    "test_suite_name": "Crypto Agent Capability Question Set",
+    "version": "1.1",
+    "description": "A progressive set of questions designed to evaluate a crypto agent from basic data retrieval to institutional-level market analysis.",
+    "questions": [
+      {
+        "id": 1,
+        "level": 1,
+        "category": "price_data",
+        "question": "Get the current price, 24-hour change, and trading volume for BTC and ETH."
+      },
+      {
+        "id": 2,
+        "level": 1,
+        "category": "basic_chart",
+        "question": "Generate a price chart for BTC over the past 7 days using 1-hour candlesticks."
+      },
+      {
+        "id": 3,
+        "level": 1,
+        "category": "advanced_chart",
+        "question": "Generate a daily BTC chart including MA(20, 50), RSI, and MACD indicators."
+      },
+      {
+        "id": 4,
+        "level": 1,
+        "category": "fear_greed_index",
+        "question": "Retrieve the current crypto Fear and Greed Index and explain what it indicates."
+      },
+      {
+        "id": 5,
+        "level": 1,
+        "category": "fear_greed_visualization",
+        "question": "Generate a visualization of the crypto Fear and Greed Index for the past 30 days."
+      },
+      {
+        "id": 6,
+        "level": 2,
+        "category": "technical_analysis",
+        "question": "Provide a full technical analysis of BTC, including trend, momentum, support and resistance levels, and risk assessment."
+      },
+      {
+        "id": 7,
+        "level": 2,
+        "category": "sentiment_analysis",
+        "question": "Analyze the current market sentiment for BTC using social media and sentiment indicators."
+      },
+      {
+        "id": 8,
+        "level": 2,
+        "category": "news_analysis",
+        "question": "Summarize the most important BTC-related news from the past 24 hours and discuss their potential market impact."
+      },
+      {
+        "id": 9,
+        "level": 2,
+        "category": "whale_activity",
+        "question": "Identify any significant BTC whale activity in the past 24 hours and explain what it may signal."
+      },
+      {
+        "id": 10,
+        "level": 2,
+        "category": "onchain_volume",
+        "question": "Analyze BTC on-chain transaction volume over the past week and interpret what it suggests about market activity."
+      },
+      {
+        "id": 11,
+        "level": 3,
+        "category": "capital_flow",
+        "question": "Analyze BTC capital inflows and outflows to determine whether accumulation or distribution is currently occurring."
+      },
+      {
+        "id": 12,
+        "level": 3,
+        "category": "order_book_analysis",
+        "question": "Analyze the BTC order book to assess buy versus sell pressure and short-term price bias."
+      },
+      {
+        "id": 13,
+        "level": 3,
+        "category": "address_activity",
+        "question": "Evaluate changes in BTC active addresses and transaction behavior to assess network health."
+      },
+      {
+        "id": 14,
+        "level": 3,
+        "category": "fear_greed_deep_analysis",
+        "question": "Compare the current Fear and Greed Index with historical levels and identify potential trading signals."
+      },
+      {
+        "id": 15,
+        "level": 4,
+        "category": "short_term_prediction",
+        "question": "Predict BTC price movement over the next 24 to 72 hours using technical signals and market sentiment."
+      },
+      {
+        "id": 16,
+        "level": 4,
+        "category": "mid_term_prediction",
+        "question": "Assess BTC’s 1 to 3 month market trend by combining on-chain data, capital flows, and macro sentiment."
+      },
+      {
+        "id": 17,
+        "level": 4,
+        "category": "risk_scenario_analysis",
+        "question": "Evaluate a scenario in which a large BTC whale initiates a major sell-off and predict possible market reactions."
+      },
+      {
+        "id": 18,
+        "level": 5,
+        "category": "full_market_research",
+        "question": "Generate a comprehensive BTC research report covering price action, technical analysis, on-chain data, sentiment, news, and risk factors."
+      },
+      {
+        "id": 19,
+        "level": 5,
+        "category": "investment_decision",
+        "question": "For a medium-risk investor, determine whether BTC should be bought, held, or sold based on current market conditions, and explain why."
+      },
+      {
+        "id": 20,
+        "level": 5,
+        "category": "institutional_perspective",
+        "question": "From an institutional investor’s perspective, evaluate whether current BTC market conditions are suitable for establishing a position."
+      }
+    ]
+  }

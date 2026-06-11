@@ -1,0 +1,172 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: 257455992712.dkr.ecr.ap-southeast-1.amazonaws.com
+  ECR_REPOSITORY: sentiedge-agent
+  ECS_CLUSTER: sentiedge-cluster
+  ECS_SERVICE: sentiedge-agent-staging
+  TASK_DEF_FAMILY: sentiedge-agent-staging
+  IMAGE_TAG: staging
+  CONTAINER_NAME: sentiedge-agent
+  CONTAINER_PORT: "3099"
+
+jobs:
+  deploy:
+    name: Build and Deploy to Staging
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build, tag, and push image to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: |
+            type=gha
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          # type=gha keeps the fast intra-CI cache; type=inline embeds
+          # buildkit cache metadata into the pushed runtime image
+          # manifest so local laptop deploys that --cache-from
+          # ${ECR_URI}:staging can reuse the layers CI built. Inline
+          # only caches final-stage layers (not the builder stage's
+          # pnpm install), which is fine — that layer is also reachable
+          # via type=gha within CI, and via the runtime image layers
+          # for non-source-changing rebuilds locally.
+          cache-to: |
+            type=gha,mode=max
+            type=inline
+          build-args: |
+            VITE_ADMIN_EMAILS=jiang2015leon@gmail.com
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition $TASK_DEF_FAMILY \
+            --query taskDefinition \
+            --output json > task-def.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Strip non-registerable fields from task definition
+        run: |
+          python3 - <<'EOF'
+          import json
+          with open("${{ steps.task-def.outputs.task-definition }}") as f:
+              td = json.load(f)
+          for key in ["taskDefinitionArn","revision","status","requiresAttributes",
+                      "compatibilities","registeredAt","registeredBy","deregisteredAt"]:
+              td.pop(key, None)
+          with open("task-def-clean.json", "w") as f:
+              json.dump(td, f, indent=2)
+          EOF
+
+      - name: Upsert Wave 1+2 autotrading env vars
+        # Idempotent: overwrites values on every deploy so a hand-edited
+        # task def doesn't drift from this config-as-code source of truth.
+        # Defaults are also wired in code; declaring them here makes a
+        # diff between deploys auditable in the GitHub Actions log.
+        run: |
+          python3 - <<'EOF'
+          import json
+          with open("task-def-clean.json") as f:
+              td = json.load(f)
+          plain = {
+              "PAPER_ORDER_TTL_SECONDS": "86400",
+              "RECONCILIATION_UNRESOLVED_DOWNGRADE_AFTER": "60",
+              "CEX_DETERMINISTIC_BYPASS": "true",
+              # PR #236 feature flags. Default OFF in code; ON in staging
+              # so the new safety / enrichment gates are exercised before
+              # they ship to prod. Keep these ON until one full deploy
+              # cycle is green; then flip prod via production-deploy.yml.
+              "CEX_PLAN_TIME_VALIDATORS_ENABLED": "true",
+              "CEX_INTENT_CROSSCHECK_ENABLED": "true",
+              "CEX_CONFIRM_QUOTE_RECHECK_ENABLED": "true",
+              "CEX_APPROVAL_MODAL_ENRICHMENT_ENABLED": "true",
+          }
+          c = td["containerDefinitions"][0]
+          env = c.get("environment", []) or []
+          names = {e.get("name") for e in env}
+          for name, value in plain.items():
+              if name in names:
+                  for e in env:
+                      if e.get("name") == name:
+                          e["value"] = value
+              else:
+                  env.append({"name": name, "value": value})
+          c["environment"] = env
+          with open("task-def-clean.json", "w") as f:
+              json.dump(td, f, indent=2)
+          print("Upserted:", list(plain.keys()))
+          EOF
+
+      - name: Register new task definition revision
+        id: register-task-def
+        run: |
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://task-def-clean.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          echo "task_def_arn=$NEW_ARN" >> $GITHUB_OUTPUT
+
+      - name: Update ECS service
+        run: |
+          # Grace period covers BGE-M3 warmup at boot (real ORT session init +
+          # dummy forward pass adds ~60-90s on top of normal Node/plugin load).
+          # See packages/core/src/ai/localembeddingManager.ts warmup().
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition ${{ steps.register-task-def.outputs.task_def_arn }} \
+            --desired-count 1 \
+            --health-check-grace-period-seconds 300 \
+            --force-new-deployment
+
+      - name: Wait for service stability
+        run: |
+          echo "Waiting up to 20 min for $ECS_SERVICE to stabilize..."
+          for attempt in $(seq 1 80); do
+            ROLLOUT=$(aws ecs describe-services \
+              --cluster $ECS_CLUSTER \
+              --services $ECS_SERVICE \
+              --region $AWS_REGION \
+              --query 'services[0].deployments[?status==`PRIMARY`].rolloutState' \
+              --output text)
+            echo "Attempt $attempt/80: rolloutState=$ROLLOUT"
+            [ "$ROLLOUT" = "COMPLETED" ] && echo "Service stable." && exit 0
+            [ "$ROLLOUT" = "FAILED" ]    && echo "Deployment FAILED." && exit 1
+            sleep 15
+          done
+          echo "Timed out after 20 min waiting for service stability."
+          exit 1

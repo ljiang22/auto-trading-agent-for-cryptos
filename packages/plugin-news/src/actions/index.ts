@@ -1,0 +1,1 @@
+export { getNewsAction } from "./getanews.ts";

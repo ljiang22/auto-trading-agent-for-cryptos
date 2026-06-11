@@ -1,0 +1,41 @@
+{
+  "description": "Editable approval payload templates for trading interrupts. Keep quote_size between 0.50 and 1.00 for safety by default.",
+  "defaults": {
+    "decision": "approved",
+    "feedback": "Approved for low-notional test execution."
+  },
+  "confirmationLevel1": {
+    "decision": "approved",
+    "feedback": "Level 1 review approved after parameter check.",
+    "parameters": {
+      "userId": "<filled-by-agent>",
+      "client_order_id": "binance-low-notional-test-001",
+      "product_id": "BTC-USDT",
+      "side": "BUY",
+      "order_configuration": {
+        "market_market_ioc": {
+          "quote_size": "0.50"
+        }
+      }
+    }
+  },
+  "confirmationLevel2": {
+    "decision": "approved",
+    "feedback": "Level 2 final confirmation approved.",
+    "parameters": {
+      "userId": "<filled-by-agent>",
+      "client_order_id": "binance-low-notional-test-001",
+      "product_id": "BTC-USDT",
+      "side": "BUY",
+      "order_configuration": {
+        "market_market_ioc": {
+          "quote_size": "1.00"
+        }
+      }
+    }
+  },
+  "rejectionTemplate": {
+    "decision": "rejected",
+    "feedback": "Rejected by test operator."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "example-general",
+  "description": "Sample NL prompts for harness smoke tests against any environment.",
+  "defaults": {
+    "agentName": "Crypto Trader",
+    "roomStrategy": "perCase",
+    "hooks": []
+  },
+  "cases": [
+    {
+      "id": "price-btc-eth",
+      "tags": ["read_only", "market"],
+      "message": {
+        "text": "What is the current price and 24h change for BTC and ETH?"
+      },
+      "expect": {
+        "maxDurationMs": 180000
+      }
+    },
+    {
+      "id": "fear-greed",
+      "tags": ["read_only"],
+      "message": {
+        "text": "What is the crypto Fear and Greed Index today?"
+      },
+      "expect": {
+        "finalTextContains": ["Fear", "Greed"],
+        "maxDurationMs": 180000
+      }
+    }
+  ]
+}

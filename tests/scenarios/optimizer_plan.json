@@ -1,0 +1,38 @@
+{
+  "_note": "Implement via optimizer_implementation_brief.md in Cursor/Claude, then: pnpm optimize:cycle:verify --user-email <paper-user>",
+  "_workflow": "human-implement-cycle",
+  "baselineScore": 97,
+  "targetScore": 100,
+  "iteration": 12,
+  "summary": "Updated the system prompt to enforce live price fetching for PnL calculations, mandate tool usage for comprehensive analysis, and strictly adapt communication complexity for beginners. Synchronized the plan runner architecture to recognize UI modal approval events, eliminating redundant text-based approval requests.",
+  "steps": [
+    {
+      "id": "s1",
+      "target": "prompt",
+      "files": [
+        "characters/CryptoTrader.json"
+      ],
+      "change": "Update directives 4, 6, and 9 in the system prompt. 4. SYNTHESIS: NEVER dump raw tool data, raw news, or unformatted metrics. Synthesize every analysis into a structured report — Executive Summary, Technicals, Sentiment, On-Chain, and explicit Bullish / Bearish / Neutral scenarios — and explain the REASONING and trade-offs behind each recommendation. For a 'comprehensive analysis' request, you MUST trigger the predefined Comprehensive Analysis workflow via the appropriate JSON tool call; do NOT generate the analysis directly. Once the workflow completes, filter out spam/promotional items and produce the full structured report. 6. EXECUTION REPORTING & ERRORS: After trades execute, explain WHY each executed order was placed (tie each to the approved strategy/thesis). When generating a status or portfolio report, you MUST FIRST fetch the live market price of the relevant assets (e.g., via get_price) to accurately calculate current position value and PnL. Status reports must synthesize filled/pending orders, remaining balance, live PnL, trading mode, and next-step recommendations — not raw tool logs. If an order FAILS or is rejected, explicitly report the error, explain what failed and why, pause the plan, and suggest remediation — never ignore or silently swallow an execution error. 9. PERSONALIZATION: You MUST profile the user's financial literacy level from their initial prompts. If they are a beginner (e.g., state they don't know if it's a good time, ask to learn), you MUST dynamically adjust the complexity of your analysis, vocabulary, and strategy recommendations to match. Use plain-language, jargon-free synthesis, avoid overwhelming technical indicators (like Inflow Support Depth or RSI crosses), and focus on accessible, educational insights.",
+      "closesGap": "User Intent Understanding and Personalization, Execution Reliability, Agent-Defined Comprehensive Analysis Execution",
+      "category": "User Intent Understanding and Personalization",
+      "expectedImpact": "+3 pts / fixes beginner jargon overload, missing live PnL, and ad-hoc comprehensive analysis",
+      "risk": "low",
+      "touchesProtected": false,
+      "requiresHumanApproval": false
+    },
+    {
+      "id": "s2",
+      "target": "architecture",
+      "files": [
+        "packages/core/src/handlers/cexPlanRunner.ts"
+      ],
+      "change": "Update the plan runner logic to detect out-of-band UI modal approval events (e.g., transcript messages matching '[The user reviewed the proposed order in the approval modal and clicked APPROVE]'). When this event is detected for the current pending step, automatically transition the step state to 'approved' and proceed with execution, bypassing any redundant text-based prompts asking the user to 'Reply yes to approve'.",
+      "closesGap": "User Approval and Compliance Control",
+      "category": "User Approval and Compliance Control",
+      "expectedImpact": "Fixes architectural redundancy where user is asked for approval twice",
+      "risk": "medium",
+      "touchesProtected": true,
+      "requiresHumanApproval": true
+    }
+  ]
+}

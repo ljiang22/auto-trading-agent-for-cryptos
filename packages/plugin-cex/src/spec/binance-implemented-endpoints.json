@@ -1,0 +1,212 @@
+{
+  "exchange": "binance",
+  "version": "1.0.0",
+  "scope": "implemented_endpoints_only",
+  "canonicalRef": "packages/plugin-cex/src/spec/canonical.ts",
+  "docsReferences": [
+    "https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints",
+    "https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints"
+  ],
+  "actions": {
+    "get_balance": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "limit", "type": "number", "required": false },
+        { "name": "cursor", "type": "string", "required": false },
+        { "name": "retail_portfolio_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v3/account",
+          "serviceMethod": "BinanceAccountsService.getBalance",
+          "wiring": "action"
+        },
+        {
+          "method": "POST",
+          "path": "/sapi/v1/asset/get-funding-asset",
+          "serviceMethod": "BinanceAccountsService.getBalance",
+          "wiring": "action_internal_subcall"
+        }
+      ],
+      "requestMapping": {
+        "limit": { "target": null, "notes": "Accepted by validator; not sent to Binance in current implementation." },
+        "cursor": { "target": null, "notes": "Accepted by validator; not sent to Binance in current implementation." },
+        "retail_portfolio_id": { "target": null, "notes": "Accepted by validator; not sent to Binance in current implementation." }
+      },
+      "exchangeRestrictions": []
+    },
+    "get_orders": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "order_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "product_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "order_status", "type": "array", "itemsType": "string", "required": false },
+        { "name": "limit", "type": "number", "required": false },
+        { "name": "cursor", "type": "string", "required": false },
+        { "name": "start_date", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "end_date", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "order_side", "type": "enum", "enum": ["BUY", "SELL"], "required": false },
+        { "name": "order_types", "type": "array", "itemsType": "string", "required": false },
+        { "name": "product_type", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v3/openOrders",
+          "serviceMethod": "BinanceOrdersService.getOrders",
+          "wiring": "action"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v3/order",
+          "serviceMethod": "BinanceOrdersService.getOrders",
+          "wiring": "action_conditional"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v3/allOrders",
+          "serviceMethod": "BinanceOrdersService.getOrders",
+          "wiring": "action_conditional"
+        }
+      ],
+      "requestMapping": {
+        "order_ids": { "target": "/api/v3/order.orderId", "notes": "Triggers per-order lookup path." },
+        "product_ids": { "target": "symbol", "notes": "product_ids[0] maps to Binance symbol." },
+        "start_date": { "target": "/api/v3/allOrders.startTime", "notes": "Converted to milliseconds." },
+        "end_date": { "target": "/api/v3/allOrders.endTime", "notes": "Converted to milliseconds." },
+        "limit": { "target": "/api/v3/allOrders.limit", "notes": "Capped at 1000 by service." }
+      },
+      "exchangeRestrictions": [
+        { "kind": "requiresProductIdsWithOrderIds", "value": true, "enforcedBy": "preflightValidateForExchange" }
+      ]
+    },
+    "create_order": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "client_order_id", "type": "string", "required": true },
+        { "name": "product_id", "type": "string", "required": true },
+        { "name": "side", "type": "enum", "enum": ["BUY", "SELL"], "required": true },
+        { "name": "order_configuration", "type": "object", "required": true },
+        { "name": "preview_id", "type": "string", "required": false },
+        { "name": "retail_portfolio_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "POST",
+          "path": "/api/v3/order",
+          "serviceMethod": "BinanceOrdersService.createOrder",
+          "wiring": "action"
+        },
+        {
+          "method": "POST",
+          "path": "/sapi/v1/margin/order",
+          "serviceMethod": "BinanceOrdersService.createMarginOrder",
+          "wiring": "action_margin_dispatch",
+          "notes": "F9: dispatched when canonical params.margin_type is set (CROSS or ISOLATED). Uses signedMarginOrderPost; ISOLATED accounts are prechecked via /sapi/v1/margin/isolated/account."
+        },
+        {
+          "method": "GET",
+          "path": "/sapi/v1/margin/isolated/account",
+          "serviceMethod": "BinanceOrdersService.createMarginOrder",
+          "wiring": "precheck_internal",
+          "notes": "F9: precheck for ISOLATED margin orders; refuses submit when the user hasn't opened the symbol's isolated account."
+        }
+      ],
+      "requestMapping": {
+        "product_id": { "target": "symbol", "notes": "Mapped via productIdToBinanceSymbol." },
+        "client_order_id": { "target": "newClientOrderId", "notes": "Sanitized to Binance-safe ID." },
+        "order_configuration": { "target": "type/timeInForce/price/quantity/quoteOrderQty/stopPrice/goodTillDate", "notes": "Variant-dependent mapping." },
+        "margin_type": { "target": "isIsolated", "notes": "F9: ISOLATED→TRUE; CROSS→FALSE." },
+        "margin_action": { "target": "sideEffectType", "notes": "F9: NORMAL→NO_SIDE_EFFECT, AUTO_BORROW→MARGIN_BUY, AUTO_REPAY→AUTO_REPAY." },
+        "leverage": { "target": null, "notes": "F9: leverage carried on intent for risk gating; not sent to Binance (account-level pref)." },
+        "retail_portfolio_id": { "target": null, "notes": "Accepted by validator; not sent to Binance in current implementation." }
+      },
+      "exchangeRestrictions": [
+        {
+          "kind": "unsupportedOrderConfigurationVariants",
+          "value": ["market_market_fok", "sor_limit_ioc", "trigger_bracket_gtc", "trigger_bracket_gtd"],
+          "enforcedBy": "preflightValidateForExchange"
+        },
+        { "kind": "quoteSizeOnlyForMarketIoc", "value": true, "enforcedBy": "preflightValidateForExchange" },
+        { "kind": "postOnlyOnlyForLimitGtc", "value": true, "enforcedBy": "preflightValidateForExchange" }
+      ]
+    },
+    "cancel_order": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "order_ids", "type": "array", "itemsType": "string", "required": true },
+        { "name": "product_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "DELETE",
+          "path": "/api/v3/order",
+          "serviceMethod": "BinanceOrdersService.cancelOrder",
+          "wiring": "action"
+        }
+      ],
+      "requestMapping": {
+        "order_ids": { "target": "orderId", "notes": "Iterates each order id and issues a delete." },
+        "product_id": { "target": "symbol", "notes": "Fallback when symbol cannot be resolved from open orders." }
+      },
+      "exchangeRestrictions": [
+        { "kind": "requiresProductIdFallback", "value": true, "enforcedBy": "preflightValidateForExchange" }
+      ]
+    },
+    "get_fills": {
+      "canonicalParameters": [
+        { "name": "userId", "type": "string", "required": true, "injected": true },
+        { "name": "exchange", "type": "string", "required": true, "injected": true },
+        { "name": "order_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "trade_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "product_ids", "type": "array", "itemsType": "string", "required": false },
+        { "name": "limit", "type": "number", "required": false },
+        { "name": "cursor", "type": "string", "required": false },
+        { "name": "start_sequence_timestamp", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "end_sequence_timestamp", "type": "string", "required": false, "format": "iso8601" },
+        { "name": "retail_portfolio_id", "type": "string", "required": false }
+      ],
+      "implementedEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v3/myTrades",
+          "serviceMethod": "BinanceOrdersService.getFills",
+          "wiring": "action"
+        }
+      ],
+      "requestMapping": {
+        "product_ids": { "target": "symbol", "notes": "Requires product_ids[0]." },
+        "start_sequence_timestamp": { "target": "startTime", "notes": "Converted to milliseconds." },
+        "end_sequence_timestamp": { "target": "endTime", "notes": "Converted to milliseconds." },
+        "order_ids": { "target": "post-filter", "notes": "Endpoint result is filtered in service by orderId." },
+        "trade_ids": { "target": null, "notes": "Accepted by validator; not sent to Binance endpoint in current implementation." },
+        "cursor": { "target": null, "notes": "Accepted by validator; not sent to Binance endpoint in current implementation." },
+        "retail_portfolio_id": { "target": null, "notes": "Accepted by validator; not sent to Binance endpoint in current implementation." }
+      },
+      "exchangeRestrictions": [
+        { "kind": "requiresProductIds", "value": true, "enforcedBy": "preflightValidateForExchange" }
+      ]
+    }
+  },
+  "serviceOnlyEndpoints": [
+    {
+      "name": "edit_order",
+      "method": "POST",
+      "path": "/api/v3/order/cancelReplace",
+      "serviceMethod": "BinanceOrdersService.editOrder",
+      "notes": "Implemented in service, not exposed as canonical action."
+    },
+    {
+      "name": "close_position",
+      "method": "POST",
+      "path": "/api/v3/order",
+      "serviceMethod": "BinanceOrdersService.closePosition",
+      "notes": "Implemented in service, not exposed as canonical action."
+    }
+  ]
+}

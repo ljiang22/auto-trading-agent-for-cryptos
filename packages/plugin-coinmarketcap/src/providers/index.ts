@@ -1,0 +1,1 @@
+export { priceProvider } from "./price"; 

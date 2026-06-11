@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "strict": false,
+    "skipLibCheck": true,
+    "typeRoots": ["../../packages/core/node_modules/@types", "../../node_modules/@types"],
+    "types": ["node"]
+  },
+  "include": ["*.mjs", "*.d.ts"],
+  "exclude": ["*.test.mjs", "_testServer.mjs"]
+}

@@ -1,0 +1,199 @@
+# syntax=docker/dockerfile:1.4
+#
+# Dockerfile.agentruntime — GCP GEAP side-environment image (§6 of docs/geap-optimization-guide.md).
+# This is NOT the AWS/ECR production image. The prod `Dockerfile` stays byte-for-byte unchanged.
+# Mirrors the prod multi-stage build (Node 23.3.0, native libs, pre-baked BGE-M3, 12 GB heap),
+# changing only what the GCP Agent Runtime contract requires:
+#   - OTEL_TRACING_ENABLED=true            (default-off everywhere else; ON only here)
+#   - honor the platform-injected PORT     (Agent Runtime/Cloud Run inject PORT as a reserved env)
+# Keep this file in sync with `Dockerfile` when the prod build changes.
+#
+# ⚠️ VERIFY BEFORE DEPLOYING (could not be fully confirmed from the GCP docs at authoring time —
+#    see docs/geap-optimization-guide.md §6.1; do NOT treat the marked items as settled):
+#    - The GCP "Deploy from Container Image" docs confirm PORT is a RESERVED env var the platform
+#      injects, so the server must listen on $PORT (handled by the CMD bridge below). ✓ verified.
+#    - The required HEALTH-CHECK path/method and the request/response INTERFACE the platform calls
+#      were NOT documented in the deploy/BYOC pages. Confirm against the BYOC setup docs that a
+#      long-lived SSE/HTTP Node server is accepted; if not, fall back to Cloud Run (or
+#      `npx adk deploy cloud_run`). The HEALTHCHECK below targets the app's real /api/health route.
+
+# == Stage 1: Builder ================================================================
+# Full toolchain: compiles TypeScript (tsup/tsc), builds native modules
+# (canvas, better-sqlite3), and assembles the Vite client SPA.
+FROM node:23.3.0-slim AS builder
+
+RUN npm install -g pnpm@9.15.7 && \
+    apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl git \
+      python3 make g++ build-essential \
+      libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev \
+      openssl libssl-dev libsecret-1-dev libopus-dev && \
+    ln -sf /usr/bin/python3 /usr/bin/python && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# ---- Dependency layer (only busts when lockfile or package.json manifests change) ----
+# Copy workspace config and lockfile first
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
+
+# Copy each workspace package.json individually so pnpm can resolve the graph.
+# Source code is NOT copied here -- this layer is cached until deps change.
+COPY packages/adapter-mongodb/package.json      packages/adapter-mongodb/package.json
+COPY packages/adapter-sqlite/package.json       packages/adapter-sqlite/package.json
+# agent-twitter-client has a prepare script (rollup -c) that runs during pnpm install
+# and requires source files -- copy the full package so install does not fail.
+COPY packages/agent-twitter-client/ packages/agent-twitter-client/
+COPY packages/cli/package.json                  packages/cli/package.json
+COPY packages/client-direct/package.json        packages/client-direct/package.json
+COPY packages/client-twitter/package.json       packages/client-twitter/package.json
+COPY packages/core/package.json                 packages/core/package.json
+COPY packages/dynamic-imports/package.json      packages/dynamic-imports/package.json
+COPY packages/plugin-charts/package.json        packages/plugin-charts/package.json
+COPY packages/plugin-coinmarketcap/package.json packages/plugin-coinmarketcap/package.json
+COPY packages/plugin-content-analysis/package.json packages/plugin-content-analysis/package.json
+COPY packages/plugin-crypto_research_search/package.json packages/plugin-crypto_research_search/package.json
+COPY packages/plugin-fearandindex_analysis/package.json packages/plugin-fearandindex_analysis/package.json
+COPY packages/plugin-institutional_adoption/package.json packages/plugin-institutional_adoption/package.json
+COPY packages/plugin-launchpad/package.json     packages/plugin-launchpad/package.json
+COPY packages/plugin-news/package.json          packages/plugin-news/package.json
+COPY packages/plugin-on_chain_data/package.json packages/plugin-on_chain_data/package.json
+COPY packages/plugin-prediction/package.json    packages/plugin-prediction/package.json
+COPY packages/plugin-sentiscore/package.json    packages/plugin-sentiscore/package.json
+COPY packages/plugin-technic_analysis/package.json packages/plugin-technic_analysis/package.json
+COPY packages/plugin-web-search/package.json    packages/plugin-web-search/package.json
+COPY packages/plugin-cex/package.json           packages/plugin-cex/package.json
+COPY agent/package.json                         agent/package.json
+COPY client/package.json                        client/package.json
+COPY docs/package.json                          docs/package.json
+
+# Install all deps (including devDeps needed for tsup/turbo/tsc, and the OTel packages
+# added to @elizaos/core in §4 — required so initTracing() can lazy-import the SDK here).
+# onnxruntime-node postinstall downloads the GPU variant by default;
+# the GPU-specific .so files are removed in the cleanup step below.
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile
+
+# Pre-create turbo cache dirs (avoids turbo ENOENT race on first run)
+RUN find packages -mindepth 1 -maxdepth 1 -type d -exec mkdir -p {}/.turbo \; && \
+    mkdir -p agent/.turbo client/.turbo docs/.turbo
+
+# ---- Source layer (only busts on source-code changes) ----
+# VITE_* variables must be baked in at build time -- Vite embeds them in the JS bundle
+ARG SERVER_BASE_URL=
+ARG VITE_APP_HOST_DOMAIN=http://localhost:3000
+ARG VITE_COOKIE_DOMAIN=localhost
+ARG VITE_ANALYTICS_BASE_URL=
+ARG VITE_ADMIN_EMAILS=
+ARG VITE_TEST_USER_EMAIL=
+ARG VITE_TEST_USER_TIER=
+
+ENV SERVER_BASE_URL=${SERVER_BASE_URL} \
+    VITE_APP_HOST_DOMAIN=${VITE_APP_HOST_DOMAIN} \
+    VITE_COOKIE_DOMAIN=${VITE_COOKIE_DOMAIN} \
+    VITE_ANALYTICS_BASE_URL=${VITE_ANALYTICS_BASE_URL} \
+    VITE_ADMIN_EMAILS=${VITE_ADMIN_EMAILS} \
+    VITE_TEST_USER_EMAIL=${VITE_TEST_USER_EMAIL} \
+    VITE_TEST_USER_TIER=${VITE_TEST_USER_TIER}
+
+# Copy entire source tree (docs/ must be present so turbo --filter=!eliza-docs works)
+COPY . /app
+
+# Build all TypeScript packages + Vite SPA (excludes eliza-docs)
+RUN pnpm run build-docker
+
+# Prune to production dependencies only (removes devDeps: tsup, tsc, turbo, jest...)
+RUN pnpm prune --prod
+
+# ---- Combined cleanup (single RUN layer, replaces 4 separate find passes) ----
+# 1. TypeScript declaration files and source maps (compile-time only)
+# 2. Changelog files, CUDA source (.cu/.cuh) -- docs/compile artifacts
+# 3. Test directories and turbo local caches
+# 4. onnxruntime GPU providers (CUDA/TensorRT) -- ~600 MB, won't run on CPU-only tasks
+RUN find /app -path "*/core/cache" -prune -o \
+      \( -name "*.d.ts" -o -name "*.js.map" -o -name "CHANGELOG*" \
+         -o -name "*.cu" -o -name "*.cuh" \) -delete 2>/dev/null; \
+    find /app/node_modules -type d \( -name "__tests__" -o -name ".cache" \) \
+         -exec rm -rf {} + 2>/dev/null; \
+    find /app/node_modules -path "*/onnxruntime-node/bin/*" \
+         \( -name "libonnxruntime_providers_cuda.so" \
+            -o -name "libonnxruntime_providers_tensorrt.so" \) \
+         -delete 2>/dev/null; \
+    true
+
+# == Stage 2: Runtime =================================================================
+# Lean image: only runtime system libs, no build toolchain.
+FROM node:23.3.0-slim AS runtime
+
+# Runtime system dependencies (identical to prod):
+#   ffmpeg / libcairo2 / libpango* / libjpeg62-turbo / libgif7 -- canvas + media
+#   libssl3 -- TLS for MongoDB / HTTPS;  libsecret-1-0 -- keychain;  libopus0 -- audio
+#   libgomp1 -- OpenMP threading required by onnxruntime-node CPU runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl ffmpeg \
+      libcairo2 libjpeg62-turbo libpango-1.0-0 libpangocairo-1.0-0 libgif7 \
+      openssl libssl3 libsecret-1-0 libopus0 \
+      libgomp1 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install pnpm for the CMD (pnpm --filter @sentiedge/agent start)
+RUN npm install -g pnpm@9.15.7
+
+WORKDIR /app
+
+# Copy pruned + trimmed artifacts from builder
+COPY --from=builder /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml ./
+COPY --from=builder /app/turbo.json ./turbo.json
+COPY --from=builder /app/node_modules ./node_modules
+
+# Download BGE-M3 model BEFORE source files so this layer is cache-stable across
+# normal code pushes. packages/core/node_modules is needed so ESM can resolve
+# @huggingface/transformers (pnpm keeps it in the per-package store, not hoisted).
+COPY packages/core/dl-model.mjs packages/core/dl-model.mjs
+COPY --from=builder /app/packages/core/node_modules packages/core/node_modules
+RUN cd /app/packages/core && node dl-model.mjs && rm dl-model.mjs
+
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/agent ./agent
+COPY --from=builder /app/characters ./characters
+COPY --from=builder /app/client/dist ./client/dist
+COPY --from=builder /app/global-bundle.pem ./global-bundle.pem
+COPY --from=builder /app/scripts ./scripts
+
+ENV NODE_ENV=production
+ENV SERVER_PORT=3000
+# V8 heap budget (same tuning as prod): 12 GB heap leaves ~4 GB for native (BGE-M3 ~2 GB,
+# LLM stream Buffers, Mongo driver, canvas). `--expose-gc` lets the comprehensive workflow
+# call global.gc() between heavy actions.
+ENV NODE_OPTIONS="--max-old-space-size=12288 --expose-gc"
+
+# §4 Observability: tracing ON for this GCP image only (default-off everywhere else). The
+# container exports OpenTelemetry to Cloud Trace over ADC on the runtime service account
+# (granted roles/cloudtrace.agent in §2). For fuller HTTP auto-instrumentation, prepend a
+# preload: NODE_OPTIONS="--import ./scripts/otel-bootstrap.mjs ...".
+ENV OTEL_TRACING_ENABLED=true
+
+ENV TRANSFORMERS_CACHE=/app/packages/core/cache
+ENV HF_HOME=/app/packages/core/cache
+
+# Cap BGE-M3 inference threads so cold-start can't pin all vCPUs.
+ENV EMBEDDING_ORT_THREADS=1
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+
+# ⚠️ Agent Runtime injects PORT as a reserved env var (verified in the deploy docs). EXPOSE is
+# cosmetic — the real listen port at runtime is $PORT. Kept at 3000 to match the repo default
+# fallback used by the CMD bridge below.
+EXPOSE 3000
+
+# ⚠️ Local-run liveness only. The platform's required health path/method were NOT documented;
+# confirm against the BYOC docs before relying on this in Agent Runtime. /api/health is the
+# app's actual route (returns 200 {"status":"ok"}). BGE-M3 warmup needs a generous grace
+# period (staging uses health-check-grace-period-seconds: 300).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3 \
+  CMD curl -fsS "http://127.0.0.1:${PORT:-3000}/api/health" || exit 1
+
+# Bridge the platform-injected PORT onto the server's SERVER_PORT (the app reads SERVER_PORT),
+# falling back to the repo default 3000 when PORT is unset (local docker run). `exec` preserves
+# signal handling (SIGTERM → graceful shutdown).
+CMD ["/bin/sh", "-c", "export SERVER_PORT=\"${PORT:-3000}\" && exec pnpm --filter @sentiedge/agent start --isRoot"]

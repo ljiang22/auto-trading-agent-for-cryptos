@@ -1,0 +1,112 @@
+name: Staging E2E Tests
+
+on:
+  # Manual-only trigger. The auto `workflow_run` on Deploy-to-Staging was
+  # disabled 2026-05-04 because it (a) burned ~9 min of CI per deploy and
+  # (b) littered the shared STAGING_TEST_EMAIL account with rooms — every
+  # run logs in as the test account, creates a default-named chat, and the
+  # backend's LLM auto-rename system (packages/client-direct/src/index.ts:1393)
+  # turned each one into a separate sidebar entry. Re-enable by restoring
+  # the workflow_run block below if you want post-deploy smoke runs again.
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E UI Tests — staging.sentiedge.ai
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright + Chromium
+        run: |
+          mkdir /tmp/e2e-runner && cd /tmp/e2e-runner
+          npm init -y
+          npm install playwright
+          npx playwright install chromium --with-deps
+
+      - name: Wait for staging to be healthy
+        run: |
+          echo "Polling staging until JS bundle returns HTTP 200..."
+          HEALTHY=0
+          for i in $(seq 1 60); do
+            HTML=$(curl -sf --max-time 10 https://staging.sentiedge.ai/ 2>/dev/null || true)
+            JS_URL=$(echo "$HTML" | grep -oP '(?<=src=")[^"]*\.js' | head -1)
+            if [ -n "$JS_URL" ]; then
+              FULL_URL="https://staging.sentiedge.ai${JS_URL}"
+              STATUS=$(curl -o /dev/null -sf -w "%{http_code}" --max-time 10 "$FULL_URL" 2>/dev/null || echo "000")
+              echo "[$(date -u +%H:%M:%S)] attempt $i: JS bundle status=$STATUS url=$FULL_URL"
+              if [ "$STATUS" = "200" ]; then
+                HEALTHY=1
+                break
+              fi
+            else
+              echo "[$(date -u +%H:%M:%S)] attempt $i: could not extract JS bundle URL from index.html"
+            fi
+            sleep 15
+          done
+          if [ "$HEALTHY" = "0" ]; then
+            echo "WARNING: staging not fully healthy after 15 min — proceeding anyway"
+          fi
+          echo "Warming up server (first root hit triggers DB/auth init, can block for 5-10s)..."
+          for w in $(seq 1 12); do
+            ROOT_MS=$(curl -o /dev/null -sf -w "%{time_total}" --max-time 30 https://staging.sentiedge.ai/ 2>/dev/null | awk '{printf "%.0f", $1 * 1000}')
+            echo "[$(date -u +%H:%M:%S)] warmup $w: root responded in ${ROOT_MS}ms"
+            if [ -n "$ROOT_MS" ] && [ "$ROOT_MS" -lt 2000 ] 2>/dev/null; then
+              echo "Server is warm — proceeding to E2E."
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Run E2E tests
+        env:
+          STAGING_URL: https://staging.sentiedge.ai
+          TEST_EMAIL: ${{ secrets.STAGING_TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.STAGING_TEST_PASSWORD }}
+          NODE_PATH: /tmp/e2e-runner/node_modules
+        run: node .github/scripts/staging-e2e.js
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots-${{ github.run_number }}
+          path: screenshots/
+          retention-days: 14
+
+      - name: Upload JSON report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ github.run_number }}
+          path: e2e-report.json
+          retention-days: 14
+
+      - name: Print report summary
+        if: always()
+        run: |
+          if [ -f e2e-report.json ]; then
+            node -e "
+              const r = require('./e2e-report.json');
+              console.log('=== E2E Summary ===');
+              console.log('Login OK:', r.login_ok);
+              console.log('Sidebar chats found:', r.sidebar_chat_count);
+              r.questions.forEach((q, i) => {
+                const icon = q.response_type === 'good' ? 'PASS' : q.response_type === 'fallback' ? 'WARN' : 'FAIL';
+                console.log(icon, 'Q' + (i+1), '|', q.response_type.toUpperCase().padEnd(8), '|',
+                  String(q.response_time_ms).padStart(6) + 'ms', '|',
+                  q.has_chart ? '[chart]' : '       ', '|', q.question.slice(0, 55));
+              });
+              const good     = r.questions.filter(q => q.response_type === 'good').length;
+              const fallback = r.questions.filter(q => q.response_type === 'fallback').length;
+              const error    = r.questions.filter(q => q.response_type === 'error').length;
+              console.log('--- Result: ' + good + ' good / ' + fallback + ' fallback / ' + error + ' error ---');
+            "
+          fi
