@@ -63,6 +63,7 @@ COPY packages/plugin-sentiscore/package.json    packages/plugin-sentiscore/packa
 COPY packages/plugin-technic_analysis/package.json packages/plugin-technic_analysis/package.json
 COPY packages/plugin-web-search/package.json    packages/plugin-web-search/package.json
 COPY packages/plugin-cex/package.json           packages/plugin-cex/package.json
+COPY packages/plugin-mantle-dex/package.json    packages/plugin-mantle-dex/package.json
 COPY agent/package.json                         agent/package.json
 COPY client/package.json                        client/package.json
 COPY docs/package.json                          docs/package.json
