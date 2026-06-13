@@ -742,6 +742,22 @@ export const requireAuth: RequestHandler = (req, res, next) => {
     authMiddleware(req, res, () => checkAuthenticated(req, res, next));
 };
 
+/**
+ * Public-demo-aware auth selector for shared/system resources (daily reports,
+ * report charts). On an isolated public side-environment (`PUBLIC_ACCESS_MODE=1`)
+ * anonymous visitors may read these, so we attach user context without blocking;
+ * on production AWS (flag unset) this is identical to `requireAuth` — anonymous
+ * requests get 401. Evaluated per-request so the flag is honored regardless of
+ * router build order. Mirrors the s3-files proxy's public-access allowance
+ * (`DirectClient` `s3FilesHandler`) and the task-chain approval route.
+ */
+export const publicOrRequireAuth: RequestHandler = (req, res, next) => {
+    if (isPublicAccessModeActive()) {
+        return authMiddleware(req, res, next);
+    }
+    return requireAuth(req, res, next);
+};
+
 const ADMIN_EMAILS = (getEnvVariable("ADMIN_EMAILS") || getEnvVariable("ADMIN_EMAIL") || "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
@@ -8197,7 +8213,7 @@ ${feedback}
 
     // ── Daily Analysis Endpoints ──────────────────────────────────
 
-    router.get("/daily-analysis", requireAuth, (req, res) => {
+    router.get("/daily-analysis", publicOrRequireAuth, (req, res) => {
         try {
             const scheduler = directClient.getDailyAnalysisScheduler();
             const fileName =
