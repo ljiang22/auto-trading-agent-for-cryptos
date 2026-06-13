@@ -1,0 +1,50 @@
+{
+  "name": "@elizaos-plugins/plugin-mantle-dex",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "@elizaos/source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup --format esm",
+    "dev": "tsup --format esm --dts --watch",
+    "clean": "rimraf dist",
+    "lint": "biome check src/",
+    "format": "biome format src/",
+    "test:unit": "vitest run __tests__/*.test.ts"
+  },
+  "dependencies": {
+    "@elizaos/core": "workspace:^",
+    "viem": "2.21.58",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.0.0",
+    "tsup": "8.3.5",
+    "vitest": "^3.0.5"
+  },
+  "agentConfig": {
+    "pluginType": "elizaos:client:1.0.0",
+    "pluginParameters": {
+      "ZERO_EX_API_KEY": { "type": "string" },
+      "MANTLE_RPC_URL": { "type": "string" },
+      "MANTLE_PRIVATE_KEY": { "type": "string" },
+      "MANTLE_CHAIN_ID": { "type": "string" },
+      "MANTLE_AUDIT_LOG_ADDRESS": { "type": "string" },
+      "MANTLE_MAX_TRADE_USD": { "type": "string" },
+      "MANTLE_MAX_SLIPPAGE_BPS": { "type": "string" }
+    }
+  }
+}

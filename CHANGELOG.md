@@ -1,5 +1,13 @@
 # Changelog
 
+## Mantle Hackathon — on-chain DEX execution (2026-06-12)
+
+- **`@elizaos-plugins/plugin-mantle-dex`** — Mantle swap plugin: `get_mantle_balance`, `get_mantle_swap_quote`, `execute_mantle_swap`, `log_mantle_intent` via 0x + viem; risk engine with allowlist, max trade USD, slippage, YOLO block.
+- **`MANTLE_WORKFLOW_MESSAGE`** — short-circuit routing in `langGraphPrecheck.ts`; dedicated `mantleWorkflowMessageHandler.ts` with two-turn `approve`/`cancel` gate, OTel spans, and `intentHash`-linked audit + swap metadata.
+- **`contracts/StrategyAuditLog.sol`** — emit-only on-chain intent audit; `scripts/mantle/deploy-audit-log.mjs` (Foundry artifact) + `scripts/mantle/smoke-swap.mjs` + `scripts/mantle/gate-check.mjs`.
+- **Client** — `EtherspotConnect` (injected EOA Gate B fallback), `MantleExecutionLinks` in chat for swap/audit explorer URLs.
+- **Deploy** — Mantle env keys in `prepare-cloud-run-env.py`; docs in `docs/MANTLE_HACKATHON.md`. Primary chain: **Mantle mainnet 5000** (0x); Sepolia 5003 via `MANTLE_CHAIN_ID`.
+
 ## plugin-cex dedup override UX (2026-06-05)
 
 - **Pre-submit dedup override dialog** — when a ledger row exists for the deterministic `client_order_id`, the workflow shows a `cex_dedup_override_required` interrupt instead of hard-refusing. The user can cancel or approve; approval derives a new `client_order_id` via `_idempotency_resubmit_nonce`.

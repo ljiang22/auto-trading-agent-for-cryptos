@@ -43,6 +43,8 @@ export * from "./utils/actionResponse.ts";
 export * from "./utils/actionSummaryHelper.ts";
 export * from "./utils/chartProxy.ts";
 export * from "./utils/dataRetention.ts";
+export * from "./utils/publicAccessMode.ts";
+export * from "./utils/publicAccessSeed.ts";
 export * from "./utils/memoryProbe.ts";
 export * from "./utils/subscriptionTier.ts";
 export * from "./utils/usage.ts";

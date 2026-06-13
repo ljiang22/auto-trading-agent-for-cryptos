@@ -26,6 +26,8 @@ TAG="${TAG:-obs}"
 DATABASE_ADAPTER="${DATABASE_ADAPTER:-sqlite}"
 GOOGLE_VERTEX_LOCATION="${GOOGLE_VERTEX_LOCATION:-global}"
 EXTRA_ENV="${EXTRA_ENV:-}"   # optional extra "K=V,K=V" appended to --set-env-vars
+ENV_VARS_FILE="${ENV_VARS_FILE:-}"  # optional YAML env file for gcloud
+ALLOW_UNAUTHENTICATED="${ALLOW_UNAUTHENTICATED:-0}"
 DRY_RUN=0
 SKIP_BUILD=0
 
@@ -39,6 +41,8 @@ while [ $# -gt 0 ]; do
     --service) SERVICE="$2"; shift 2 ;;
     --tag) TAG="$2"; shift 2 ;;
     --skip-build) SKIP_BUILD=1; shift ;;
+    --allow-unauthenticated) ALLOW_UNAUTHENTICATED=1; shift ;;
+    --env-vars-file) ENV_VARS_FILE="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage 0 ;;
     *) echo "unknown arg: $1" >&2; usage 2 ;;
@@ -65,6 +69,14 @@ IMG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/agent:${TAG}"
 ENV_VARS="OTEL_TRACING_ENABLED=true,DATABASE_ADAPTER=${DATABASE_ADAPTER},PAPER_TRADING_ENABLED=true,GOOGLE_VERTEX_PROJECT=${PROJECT_ID},GOOGLE_VERTEX_LOCATION=${GOOGLE_VERTEX_LOCATION}"
 [ -n "$EXTRA_ENV" ] && ENV_VARS="${ENV_VARS},${EXTRA_ENV}"
 
+AUTH_FLAG="--no-allow-unauthenticated"
+[ "$ALLOW_UNAUTHENTICATED" = "1" ] && AUTH_FLAG="--allow-unauthenticated"
+
+DEPLOY_ENV_ARGS=(--set-env-vars "$ENV_VARS")
+if [ -n "$ENV_VARS_FILE" ]; then
+  DEPLOY_ENV_ARGS=(--env-vars-file "$ENV_VARS_FILE")
+fi
+
 run() { echo "+ $*"; [ "$DRY_RUN" = 1 ] || "$@"; }
 
 echo "=== GEAP Cloud Run deploy (side-environment, AWS-isolated) ==="
@@ -90,8 +102,8 @@ run gcloud run deploy "$SERVICE" \
   --execution-environment gen2 \
   --memory 16Gi --cpu 4 --no-cpu-throttling \
   --timeout 3600 \
-  --no-allow-unauthenticated \
-  --set-env-vars "$ENV_VARS"
+  $AUTH_FLAG \
+  "${DEPLOY_ENV_ARGS[@]}"
 
 echo ""
 echo "Next:"

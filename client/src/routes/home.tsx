@@ -21,6 +21,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LoginPrompt } from "@/components/auth/LoginPrompt";
 import { useTranslation } from "react-i18next";
 
+const isPublicAccessClient = () =>
+    import.meta.env.VITE_PUBLIC_ACCESS_MODE === "1";
+
 export default function Home() {
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -94,7 +97,7 @@ export default function Home() {
     };
 
     const handleStartChat = async (agentId: string) => {
-        if (!isAuthenticated) {
+        if (!isAuthenticated && !isPublicAccessClient()) {
             setPendingAgentId(agentId);
             setShowLoginPrompt(true);
             return;

@@ -102,7 +102,7 @@ async function main() {
     }
 
     const questionsFile = await loadQuestionsFile(args.questionsPath);
-    let suite = legacyQuestionsToSuite(questionsFile);
+    const suite = legacyQuestionsToSuite(questionsFile);
 
     suite.defaults = {
         ...suite.defaults,

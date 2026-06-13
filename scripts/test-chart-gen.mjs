@@ -70,14 +70,14 @@ function normalizeRow(row, fmt) {
     if (time === null) return null;
 
     if (fmt === "seven_category") {
-        const sn = parseFloat(low.strongly_negative || "0") || 0;
-        const mn_ = parseFloat(low.moderately_negative || "0") || 0;
-        const miln = parseFloat(low.mildly_negative || "0") || 0;
-        const neu = parseFloat(low.neutral || "0") || 0;
-        const milp = parseFloat(low.mildly_positive || "0") || 0;
-        const mp = parseFloat(low.moderately_positive || "0") || 0;
-        const sp = parseFloat(low.strongly_positive || "0") || 0;
-        let total = parseFloat(low.total || "0") || 0;
+        const sn = Number.parseFloat(low.strongly_negative || "0") || 0;
+        const mn_ = Number.parseFloat(low.moderately_negative || "0") || 0;
+        const miln = Number.parseFloat(low.mildly_negative || "0") || 0;
+        const neu = Number.parseFloat(low.neutral || "0") || 0;
+        const milp = Number.parseFloat(low.mildly_positive || "0") || 0;
+        const mp = Number.parseFloat(low.moderately_positive || "0") || 0;
+        const sp = Number.parseFloat(low.strongly_positive || "0") || 0;
+        let total = Number.parseFloat(low.total || "0") || 0;
         const sum = sn + mn_ + miln + neu + milp + mp + sp;
         if (total <= 0 && sum > 0) total = sum;
         const coarseNeg = sn + mn_ + miln;
@@ -85,7 +85,7 @@ function normalizeRow(row, fmt) {
         const expRaw = low.expected_positive;
         let value;
         if (expRaw !== undefined && expRaw !== "") {
-            const p = parseFloat(expRaw);
+            const p = Number.parseFloat(expRaw);
             value = Number.isFinite(p) ? Math.max(-1, Math.min(1, p))
                 : (total > 0 ? (-1*sn + (-2/3)*mn_ + (-1/3)*miln + (1/3)*milp + (2/3)*mp + sp) / total : 0);
         } else {
@@ -94,13 +94,13 @@ function normalizeRow(row, fmt) {
         return { time, value: Math.max(-1, Math.min(1, value)), negative: coarseNeg, neutral: neu, positive: coarsePos, total: total > 0 ? total : 1, expected_negative: 0 };
     }
 
-    const neg = parseFloat(low.negative || "0") || 0;
-    const neu = parseFloat(low.neutral || "0") || 0;
-    const pos = parseFloat(low.positive || "0") || 0;
-    let total = parseFloat(low.total || "0") || 0;
+    const neg = Number.parseFloat(low.negative || "0") || 0;
+    const neu = Number.parseFloat(low.neutral || "0") || 0;
+    const pos = Number.parseFloat(low.positive || "0") || 0;
+    let total = Number.parseFloat(low.total || "0") || 0;
     if (total <= 0) { const s = neg + neu + pos; if (s > 0) total = s; }
     const value = total > 0 ? (pos - neg) / total : 0;
-    return { time, value, negative: neg, neutral: neu, positive: pos, total, expected_negative: parseFloat(low.expected_negative || "0") || 0 };
+    return { time, value, negative: neg, neutral: neu, positive: pos, total, expected_negative: Number.parseFloat(low.expected_negative || "0") || 0 };
 }
 
 function normalizeRows(rows) {

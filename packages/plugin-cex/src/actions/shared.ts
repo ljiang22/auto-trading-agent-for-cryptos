@@ -968,7 +968,13 @@ export async function getUserTradingMode(
         }
     }
 
-    return "live";
+    // Public-demo default: paper. The deployment has only dummy exchange
+    // creds (can't move real money), and the seeded paper cache key is
+    // per-instance/in-memory — fragile on Cloud Run. Defaulting to paper
+    // here is the instance-independent safety net so a missed cache never
+    // resolves a public-demo order to LIVE. (Raw env check, not the core
+    // isPublicAccessModeActive helper, to avoid coupling plugin-cex to it.)
+    return process.env.PUBLIC_ACCESS_MODE?.trim() === "1" ? "paper" : "live";
 }
 
 /**

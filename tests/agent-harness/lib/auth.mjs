@@ -79,7 +79,7 @@ export async function login(input) {
         );
     }
 
-    let accessToken =
+    const accessToken =
         extractAccessTokenFromHeaders(response.headers) ||
         (typeof body?.access_token === "string" ? body.access_token : null) ||
         (typeof body?.token === "string" ? body.token : null);

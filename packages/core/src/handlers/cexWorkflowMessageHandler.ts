@@ -220,6 +220,71 @@ export function extractFirstBalancedJsonObject(source: string): string | null {
 }
 
 /**
+ * Lenient JSON string unescape: decodes the standard JSON escapes and, for
+ * unrecognized escapes the model sometimes emits inside markdown (e.g. a
+ * markdown-escaped `\$`), drops the backslash and keeps the character so the
+ * rendered text reads naturally.
+ */
+export function lenientUnescapeJsonString(value: string): string {
+    return value.replace(/\\(u[0-9a-fA-F]{4}|[\s\S])/g, (_m, esc: string) => {
+        switch (esc[0]) {
+            case '"':
+                return '"';
+            case "\\":
+                return "\\";
+            case "/":
+                return "/";
+            case "b":
+                return "\b";
+            case "f":
+                return "\f";
+            case "n":
+                return "\n";
+            case "r":
+                return "\r";
+            case "t":
+                return "\t";
+            case "u":
+                return String.fromCharCode(Number.parseInt(esc.slice(1), 16));
+            default:
+                return esc; // unknown escape (e.g. \$) → drop the backslash
+        }
+    });
+}
+
+/**
+ * Last-resort, JSON.parse-free extraction of the `response` field from a
+ * `{ "response": "<markdown>" }` envelope. Anchors on the field key and the
+ * envelope's trailing `}` instead of parsing, so it recovers the markdown
+ * even when the body contains invalid JSON escapes (e.g. `\$1000`) or
+ * unescaped interior double-quotes that defeat `JSON.parse`. Returns null
+ * when no `response` envelope is present, so genuine plain-text replies pass
+ * through to the caller unchanged.
+ */
+export function extractResponseFieldLenient(raw: string): string | null {
+    if (!raw) return null;
+    let t = raw.trim();
+    // Strip a leading ``` / ```json fence and a trailing ``` fence, if present.
+    t = t
+        .replace(/^```(?:json)?[ \t]*\r?\n?/i, "")
+        .replace(/\r?\n?```$/i, "")
+        .trim();
+
+    const keyMatch = t.match(/"response"[ \t]*:[ \t]*"/);
+    if (!keyMatch || keyMatch.index === undefined) return null;
+    const valStart = keyMatch.index + keyMatch[0].length;
+
+    const lastBrace = t.lastIndexOf("}");
+    if (lastBrace < valStart) return null;
+
+    const between = t.slice(valStart, lastBrace);
+    const lastQuote = between.lastIndexOf('"');
+    if (lastQuote < 0) return null;
+
+    return lenientUnescapeJsonString(between.slice(0, lastQuote));
+}
+
+/**
  * Parses markdown JSON from the LLM per `cexMessageTemplate.ts`:
  * - Option A: `{ "action", "parameters" }` inside ``` / ```json
  * - Result / final: `{ "response": "..." }` inside ``` / ```json
@@ -286,15 +351,26 @@ function parseCexMarkdownJsonContract(
     }
 
     const slice = extractFirstBalancedJsonObject(t);
-    if (!slice) return null;
-    const parsed = parseTolerant(slice);
-    if (!parsed || typeof parsed !== "object") return null;
-    const o = parsed as Record<string, unknown>;
-    if (mode === "response_only") {
-        return "response" in o ? o : null;
+    if (slice) {
+        const parsed = parseTolerant(slice);
+        if (parsed && typeof parsed === "object") {
+            const o = parsed as Record<string, unknown>;
+            if (mode === "response_only") {
+                if ("response" in o) return o;
+            } else {
+                if (typeof o.action === "string" && o.action.length > 0) return o;
+                if ("response" in o) return o;
+            }
+        }
     }
-    if (typeof o.action === "string" && o.action.length > 0) return o;
-    return "response" in o ? o : null;
+
+    // Last resort: recover a `{ "response": "<markdown>" }` envelope whose body
+    // carries invalid JSON escapes (e.g. `\$1000`) or unescaped interior quotes
+    // that defeat parseTolerant. Returns the markdown directly; genuine
+    // non-envelope text (no `response` key) still falls through to null so the
+    // caller keeps the raw reply.
+    const lenientResponse = extractResponseFieldLenient(t);
+    return lenientResponse !== null ? { response: lenientResponse } : null;
 }
 
 function cexUnknownResponseToDisplayText(value: unknown): string | undefined {
@@ -529,18 +605,18 @@ function resolveOrderStreamSummary(
 function orderSubmitNotionalUsd(params: Record<string, unknown> | undefined): number | undefined {
     if (!params || typeof params !== "object") return undefined;
     const toNum = (c: unknown): number => {
-        if (c == null) return NaN;
+        if (c == null) return Number.NaN;
         const n = Number(String(c).replace(/[^0-9.]/g, ""));
-        return Number.isFinite(n) && n > 0 ? n : NaN;
+        return Number.isFinite(n) && n > 0 ? n : Number.NaN;
     };
     for (const c of [params.notional_usd, params.notional, params.quote_size, params.quoteOrderQty, params.usd, params.amount]) {
         const n = toNum(c);
         if (Number.isFinite(n)) return n;
     }
     const oc = params.order_configuration as Record<string, Record<string, unknown> | undefined> | undefined;
-    let baseSize = NaN;
-    let quoteSize = NaN;
-    let price = NaN;
+    let baseSize = Number.NaN;
+    let quoteSize = Number.NaN;
+    let price = Number.NaN;
     if (oc && typeof oc === "object") {
         for (const inner of Object.values(oc)) {
             if (!inner || typeof inner !== "object") continue;
@@ -2620,8 +2696,8 @@ export async function applyComposeDefaults(
                     if (provider?.fetchBookTicker && symbol) {
                         try {
                             const tick = await provider.fetchBookTicker(symbol, venue);
-                            const bid = tick ? Number.parseFloat(tick.bid) : NaN;
-                            const ask = tick ? Number.parseFloat(tick.ask) : NaN;
+                            const bid = tick ? Number.parseFloat(tick.bid) : Number.NaN;
+                            const ask = tick ? Number.parseFloat(tick.ask) : Number.NaN;
                             if (Number.isFinite(bid) && Number.isFinite(ask) && bid > 0 && ask > 0) {
                                 const mid = (bid + ask) / 2;
                                 const placeholder = (mid * 0.80).toFixed(2);
@@ -4513,7 +4589,7 @@ async function executeAction(state: CEXWorkflowStateType): Promise<Partial<CEXWo
             );
             if (ledger && clientOrderId && typeof provider?.checkExistingOrder === "function") {
                 try {
-                    let activeParams = {
+                    const activeParams = {
                         ...(state.approvedActionCall?.userParams ?? {}),
                     } as Record<string, unknown>;
                     let activeClientOrderId = clientOrderId;
@@ -5613,16 +5689,37 @@ const MULTI_STEP_REGEXES: RegExp[] = [
     /\brotate\b.+\b(into|to|from)\b.+\b(over|across)\b/i,
     /\btake[-\s]profit\b.*\b(at|level|ladder)\b/i,
     /\bposition exit\b/i,
+    // Conditional / scaled buy-ladders, e.g. "buy $300 now, buy another
+    // $300 if BTC drops 5%, buy another $200 if it drops 10%, keep $200
+    // reserve". These are multi-order plans — route them to the plan
+    // executor instead of dead-ending in the keyword-only strategy compiler.
+    /\bbuy\s+(another|more)\b/i,
+    /\b(buy|sell|add|accumulate|scale)\b[\s\S]{0,80}\bif\b[\s\S]{0,40}\b(drops?|falls?|dips?|declines?|down|below|rises?|gains?|above|hits?|reaches?)\b/i,
+    /\bif\b[\s\S]{0,40}\b(drops?|falls?|dips?|declines?|pulls?\s+back|rises?|gains?|jumps?)\b[\s\S]{0,20}\d+(?:\.\d+)?\s*%/i,
     // zh-CN
     /(定投|分批(建仓|减仓|买入|卖出)|轮换)/u,
 ];
 
-function matchesMultiStepPattern(text: string): boolean {
+export function matchesMultiStepPattern(text: string): boolean {
     if (!text) return false;
     for (const re of MULTI_STEP_REGEXES) {
         if (re.test(text)) return true;
     }
     return false;
+}
+
+/**
+ * Resolve the execution mode shown on a plan-as-text card. Honors an
+ * explicit per-request override; otherwise defaults to paper in the public
+ * demo (PUBLIC_ACCESS_MODE=1, dummy creds — can't move real money) and live
+ * elsewhere. Mirrors the paper-default applied to getUserTradingMode /
+ * resolveTradingMode so every mode-resolution site agrees.
+ */
+export function resolvePlanExecutionMode(
+    override: "live" | "paper" | "shadow" | null | undefined,
+): "live" | "paper" | "shadow" {
+    if (override) return override;
+    return process.env.PUBLIC_ACCESS_MODE?.trim() === "1" ? "paper" : "live";
 }
 
 const PLAN_INTENT_SCHEMA = z.object({
@@ -5716,7 +5813,7 @@ async function generatePlanAsText(
     // default. We surface this verbatim in the plan output so the user
     // can see and correct it before placing any step.
     const executionMode: "live" | "paper" | "shadow" =
-        state.executionModeOverride ?? "live";
+        resolvePlanExecutionMode(state.executionModeOverride);
 
     const template = getCexPlanAsTextTemplate();
 

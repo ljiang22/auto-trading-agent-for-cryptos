@@ -88,8 +88,8 @@ describe("Fix 15 — parseDepth", () => {
     });
     it("falls back to 10 on non-finite", () => {
         expect(parseDepth("not-a-number")).toBe(10);
-        expect(parseDepth(NaN)).toBe(10);
-        expect(parseDepth(Infinity)).toBe(10);
+        expect(parseDepth(Number.NaN)).toBe(10);
+        expect(parseDepth(Number.POSITIVE_INFINITY)).toBe(10);
     });
     it("clamps to minimum 1", () => {
         expect(parseDepth(0)).toBe(10);

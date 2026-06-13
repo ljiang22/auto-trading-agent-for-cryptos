@@ -111,7 +111,7 @@ function mmr(
 
     while (selected.length < topK && remaining.length > 0) {
         let best = remaining[0];
-        let bestMmr = -Infinity;
+        let bestMmr = Number.NEGATIVE_INFINITY;
         for (const cand of remaining) {
             let maxSim = 0;
             const candTok = tokens(cand.id, cand.doc.text);

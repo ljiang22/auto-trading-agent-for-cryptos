@@ -182,7 +182,13 @@ async function resolveTradingMode(
         }
     }
 
-    const fallback = DEFAULT_USER_TRADING_PREFERENCES.default_mode as TradingMode;
+    // Public-demo default is paper (matches getUserTradingMode in shared.ts):
+    // the deployment can't move real money and the seeded paper cache is
+    // per-instance, so a cache miss must not report LIVE.
+    const fallback =
+        process.env.PUBLIC_ACCESS_MODE?.trim() === "1"
+            ? ("paper" as TradingMode)
+            : (DEFAULT_USER_TRADING_PREFERENCES.default_mode as TradingMode);
     return { mode: fallback, source: "default" };
 }
 

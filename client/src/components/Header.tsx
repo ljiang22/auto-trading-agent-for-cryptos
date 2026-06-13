@@ -27,6 +27,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import { getIconColorStyle, isGradientTier } from '@/lib/iconColors';
 import { GradientUserIcon } from './GradientUserIcon';
+import { EtherspotConnect } from '@/components/mantle/EtherspotConnect';
 import { MobileTocToggleButton } from './MobileTocToggleButton';
 import { getUserDisplayName } from '@/lib/userDisplay';
 import { useTranslation } from 'react-i18next';
@@ -58,6 +59,7 @@ export default function Header() {
         <MobileTocToggleButton />
       </div>
       <div className="flex items-center gap-2">
+      <EtherspotConnect />
       {isAuthenticated ? (
         <>
           <DropdownMenu>

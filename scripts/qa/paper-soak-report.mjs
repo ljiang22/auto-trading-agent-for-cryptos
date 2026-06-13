@@ -45,7 +45,7 @@ function stdev(arr) {
 }
 
 function maxDrawdown(cumulative) {
-    let peak = -Infinity;
+    let peak = Number.NEGATIVE_INFINITY;
     let maxDd = 0;
     for (const v of cumulative) {
         peak = Math.max(peak, v);

@@ -36,8 +36,9 @@ import { ActionTab } from './ActionTab';
 import { ComprehensiveActionTab, type ComprehensiveActionTabRef } from './ComprehensiveActionTab';
 import { TaskChainApprovalDialog } from './TaskChainApprovalDialog';
 import { Dialog } from "./Dialog/Dialog";
-import { type cexParamDef } from "@elizaos/core";
-import { type HumanInputDialogData } from "./Dialog/HumanInputDialog";
+import type { cexParamDef } from "@elizaos/core";
+import type { HumanInputDialogData } from "./Dialog/HumanInputDialog";
+import { MantleExecutionLinks } from "@/components/mantle/MantleExecutionLinks";
 import { detectApprovalSurface } from "@/hooks/useApprovalRouter";
 import { ChartSidebar } from './ChartSidebar';
 import { ChartEmbed } from './ChartEmbed';
@@ -1694,8 +1695,81 @@ export default function Page({ agentId, roomId }: { agentId: UUID; roomId: UUID 
                     setShowApprovalDialog(true);
                 }
             },
-            (_response) => {
-                // Action response callback (no-op)
+            (actionResponse) => {
+                // Mantle / CEX action handlers emit action_response (not
+                // intermediate_response). Mirror the intermediate path so
+                // workflow replies appear in the chat stream.
+                queryClient.setQueryData(
+                    ["messages", agentId, streamRoomId],
+                    (old: ContentWithUser[] = []) => {
+                        const preserved = old.filter((msg) => {
+                            if (msg.user === "user") return true;
+                            if (msg.user === "system" && (msg.isLoading || msg.isStreaming)) {
+                                return false;
+                            }
+                            return true;
+                        });
+
+                        const text =
+                            actionResponse?.text ??
+                            actionResponse?.content?.text ??
+                            "";
+                        const mappedResponse = {
+                            ...actionResponse,
+                            text,
+                            createdAt: actionResponse.createdAt ?? Date.now(),
+                            user:
+                                actionResponse.userId === agentId
+                                    ? "system"
+                                    : "user",
+                            conversationId: currentConversationId,
+                            metadata:
+                                actionResponse.content?.metadata ??
+                                actionResponse.metadata,
+                            content: {
+                                ...(actionResponse.content ?? {}),
+                                text,
+                            },
+                        };
+
+                        const existingIndex = preserved.findIndex(
+                            (msg) => msg.id === mappedResponse.id,
+                        );
+
+                        if (existingIndex >= 0) {
+                            const existing = preserved[existingIndex];
+                            const updated = [...preserved];
+                            updated[existingIndex] = {
+                                ...existing,
+                                ...mappedResponse,
+                                createdAt:
+                                    existing.createdAt ?? mappedResponse.createdAt,
+                                conversationId:
+                                    existing.conversationId ?? currentConversationId,
+                                text: mappedResponse.text ?? existing.text,
+                                content: {
+                                    ...(existing.content || {}),
+                                    ...(mappedResponse.content || {}),
+                                    text: mappedResponse.text ?? existing.text,
+                                },
+                                metadata:
+                                    mappedResponse.metadata ?? existing.metadata,
+                            };
+                            return updated;
+                        }
+
+                        return [...preserved, mappedResponse];
+                    },
+                );
+
+                const existingIndex = accumulatedResponses.findIndex(
+                    (response) => response.id === actionResponse.id,
+                );
+                if (existingIndex >= 0) {
+                    accumulatedResponses[existingIndex] = actionResponse;
+                } else {
+                    accumulatedResponses.push(actionResponse);
+                }
             },
             (intermediateResponse) => {
                 // Handle intermediate responses - show them immediately
@@ -2413,6 +2487,15 @@ export default function Page({ agentId, roomId }: { agentId: UUID; roomId: UUID 
                                                                     )}
                                                                 </>
                                                             )}
+
+                                                            <MantleExecutionLinks
+                                                                metadata={
+                                                                    (response as { metadata?: Record<string, unknown> })
+                                                                        ?.metadata ??
+                                                                    (response as { content?: { metadata?: Record<string, unknown> } })
+                                                                        ?.content?.metadata
+                                                                }
+                                                            />
 
                                                             {/* Show ActionTab for regular action results */}
                                                             {hasTraditionalActionResults && (

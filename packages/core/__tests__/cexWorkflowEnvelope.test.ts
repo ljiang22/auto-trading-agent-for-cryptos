@@ -336,3 +336,46 @@ describe("action_or_response contract vs tradingInfoMessageHandler parseResponse
         expect(trading.action).toBe("A");
     });
 });
+
+describe("parseCexFormattedResultEnvelope — invalid-escape / unescaped-quote recovery", () => {
+    it("recovers a response with a markdown-escaped dollar sign (\\$) that breaks JSON.parse", () => {
+        // Long trading markdown often contains `\$60,691.90` etc. — an invalid
+        // JSON escape that defeats both JSON.parse and the control-char retry,
+        // so the raw envelope used to leak into the chat.
+        const raw = '{"response": "Buy BTC near \\$60,691.90 support with \\$1000."}';
+        const out = parseCexFormattedResultEnvelope(raw);
+        expect(out.startsWith("{")).toBe(false);
+        expect(out).toContain("$60,691.90");
+        expect(out).toContain("$1000");
+    });
+
+    it("recovers a response containing an unescaped interior double-quote", () => {
+        const raw = '{"response": "Buy at the "support" level near 60k."}';
+        const out = parseCexFormattedResultEnvelope(raw);
+        expect(out.startsWith("{")).toBe(false);
+        expect(out).toContain("support");
+        expect(out).toContain("near 60k.");
+    });
+
+    it("recovers a realistic multi-strategy reply with \\$ + raw newlines + headings", () => {
+        const raw = [
+            "{",
+            '  "response": "Here are 3 auto-trading strategy options for \\$1000.',
+            "",
+            "## Strategy Option 1: Conservative DCA",
+            "",
+            "*   Buy when price is near \\$60,691.90 support.\"",
+            "}",
+        ].join("\n");
+        const out = parseCexFormattedResultEnvelope(raw);
+        expect(out.startsWith("{")).toBe(false);
+        expect(out).toContain("## Strategy Option 1");
+        expect(out).toContain("$1000");
+        expect(out).toContain("$60,691.90");
+    });
+
+    it("leaves a genuine plain-markdown reply (no envelope) unchanged", () => {
+        const raw = "## Strategy\n\nBuy BTC near $60k.";
+        expect(parseCexFormattedResultEnvelope(raw)).toBe(raw.trim());
+    });
+});

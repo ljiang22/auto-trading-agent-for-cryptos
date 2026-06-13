@@ -49,6 +49,7 @@ import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { cn } from "./lib/utils";
 import { TableOfContentsProvider } from "./contexts/TableOfContentsContext";
 import AnalyticsTracker from "./components/AnalyticsTracker";
+import { MantleWalletProvider } from "./components/mantle/MantleWalletProvider";
 import { LanguageProvider } from "./contexts/LanguageContext";
 // OnboardingTour ships ~300 lines + demo PNGs and is only used on first
 // visit / when the user explicitly re-runs the tour. Lazy so it doesn't
@@ -165,9 +166,11 @@ function App() {
             <AuthProvider>
                 <LanguageProvider>
                     <ThemeProvider>
-                        <ThinkingBubbleProvider>
-                            <AppShell />
-                        </ThinkingBubbleProvider>
+                        <MantleWalletProvider>
+                            <ThinkingBubbleProvider>
+                                <AppShell />
+                            </ThinkingBubbleProvider>
+                        </MantleWalletProvider>
                     </ThemeProvider>
                 </LanguageProvider>
             </AuthProvider>

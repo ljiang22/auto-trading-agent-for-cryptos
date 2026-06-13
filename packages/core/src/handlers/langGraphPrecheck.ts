@@ -191,11 +191,30 @@ const NON_CRYPTO_INSTRUMENT_GUARD_RE =
     /\b(?:tesla|tsla|apple|aapl|microsoft|msft|nvidia|nvda|amazon|amzn|google|googl|spy|s\s?&\s?p|s\s?and\s?p|nasdaq|nas100|dow|djia|russell|stocks?|share[s]?|equit(?:y|ies)|forex|fx|eur[/]?usd|gbp[/]?usd|usd[/]?jpy|gold|gld|silver|slv|oil|wti|brent|index\s+fund|etf|robinhood)\b/i;
 
 /**
+ * Investment-timing / buy-decision advisory ("is now a good time to buy/invest/DCA…", "should I
+ * buy/invest…", "I have $X and want to invest…"). These MUST reach the LLM classifier (which routes
+ * them TASK_CHAIN for a multi-dimension timing analysis) — a deterministic price-lookup REGULAR
+ * short-circuit on them produces a one-tool answer to a decision question.
+ */
+const BUY_DECISION_ADVISORY_GUARD_RE =
+    /\b(?:good\s+time\s+to\s+(?:buy|invest|dca|enter|get\s+in)|should\s+i\s+(?:buy|invest|dca)|want\s+to\s+invest|worth\s+(?:buying|investing))\b/i;
+
+/**
  * Re-exported so external tooling (e.g. `scripts/eval-classifier-static.mjs`)
  * can validate routing decisions against the same regex set the runtime
  * uses, without maintaining a parallel mirror that drifts.
  */
 export const SHORT_CIRCUIT_PATTERNS: ShortCircuitPattern[] = [
+    {
+        name: "mantle_swap_intent",
+        re: /\b(?:swap|exchange|convert)\b.*\b(?:on\s+)?mantle\b|\b(?:on\s+)?mantle\b.*\b(?:swap|exchange|convert)\b|\bWMNT\b.*\b(?:swap|to)\b|\bMerchant\s+Moe\b/i,
+        classification: "MANTLE_WORKFLOW_MESSAGE",
+    },
+    {
+        name: "mantle_balance_intent",
+        re: /\b(?:balance|holdings|wallet)\b.*\bmantle\b|\bmantle\b.*\b(?:balance|holdings|wallet)\b/i,
+        classification: "MANTLE_WORKFLOW_MESSAGE",
+    },
     {
         // Positive-routing CEX intent matcher. Fires on any of:
         //   - "my/our/your <account-noun>"               ("my balance", "your orders")
@@ -420,6 +439,9 @@ export const SHORT_CIRCUIT_PATTERNS: ShortCircuitPattern[] = [
         name: "price_or_direction_lookup",
         re: /^(what|how\s+much|how's|how\s+is|hows|is)\s+(?!.*(?:\b(?:my|our|your)\s+(?:account|balance|wallet|holdings?|portfolio|orders?|fills?|positions?|trades?|history)|\b(?:do|does)\s+(?:i|we|you)\s+have|\bmine\s+(?:in|on)))\s*.*(btc|eth|sol|bitcoin|ethereum|solana|price)\b/i,
         classification: "REGULAR_MESSAGE",
+        // Buy-decision timing advisory must NOT short-circuit to REGULAR — the LLM classifier
+        // routes it to TASK_CHAIN for the multi-dimension timing analysis.
+        excludeIf: [BUY_DECISION_ADVISORY_GUARD_RE],
     },
     {
         name: "price_or_direction_lookup_zh",
@@ -741,7 +763,7 @@ function parseClassificationResponse(response: string): {
         isCryptoRelated?: boolean;
     };
 
-    if (!parsed.classification || !['REGULAR_MESSAGE', 'CEX_WORKFLOW_MESSAGE', 'TASK_CHAIN_MESSAGE', 'COMPREHENSIVE_ANALYSIS_MESSAGE'].includes(parsed.classification)) {
+    if (!parsed.classification || !['REGULAR_MESSAGE', 'CEX_WORKFLOW_MESSAGE', 'TASK_CHAIN_MESSAGE', 'COMPREHENSIVE_ANALYSIS_MESSAGE', 'MANTLE_WORKFLOW_MESSAGE'].includes(parsed.classification)) {
         throw new Error("Invalid classification type");
     }
 
@@ -764,6 +786,8 @@ function getClassificationDisplayName(classification: MessageClassificationType)
             return "Regular Message";
         case "CEX_WORKFLOW_MESSAGE":
             return "Exchange Workflow";
+        case "MANTLE_WORKFLOW_MESSAGE":
+            return "Mantle On-Chain Workflow";
         case "TASK_CHAIN_MESSAGE":
             return "Task Chain Processing";
         case "COMPREHENSIVE_ANALYSIS_MESSAGE":

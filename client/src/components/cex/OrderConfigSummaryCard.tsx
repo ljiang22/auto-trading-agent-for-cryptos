@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { ORDER_VARIANT_LABELS } from "@elizaos-plugins/plugin-cex/nl";
 import { cn } from "@/lib/utils";
 

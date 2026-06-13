@@ -27,6 +27,7 @@ import {
     type AgentRuntime,
     type ProcessingStep,
     type UUID,
+    isPublicAccessModeActive,
 } from "@elizaos/core";
 import bodyParser from "body-parser";
 import compression from "compression";
@@ -62,6 +63,11 @@ const ANONYMOUS_LIMIT_ERROR_CODE = "ANON_DAILY_MESSAGE_LIMIT";
  * Read at call time: core loads `.env` after some imports, so module-scope would be false. */
 function isLocalDevModeActive(): boolean {
     return process.env.LOCAL_DEV_MODE?.trim() === "1";
+}
+
+/** Skip anonymous quotas and chart auth when public demo mode is on. */
+function isAnonymousBypassActive(): boolean {
+    return isLocalDevModeActive() || isPublicAccessModeActive();
 }
 
 // frame-ancestors 'self' replaces X-Frame-Options: DENY — DENY blocks
@@ -811,11 +817,14 @@ export class DirectClient {
 
                 if (userInfo.type === "anonymous") {
                     const allowLocalAnonSystemChart =
-                        isLocalDevModeActive() &&
+                        isAnonymousBypassActive() &&
                         owner === "system" &&
                         s3Key.toLowerCase().includes("/charts/") &&
                         s3Key.toLowerCase().endsWith(".html");
-                    if (!allowLocalAnonSystemChart) {
+                    const allowPublicAccessResource =
+                        isPublicAccessModeActive() &&
+                        (owner === "system" || owner === userInfo.userId);
+                    if (!allowLocalAnonSystemChart && !allowPublicAccessResource) {
                         elizaLogger.warn(
                             `[s3-proxy] 401 anonymous chart/resource request method=${req.method} path=${req.path}`
                         );
@@ -1062,7 +1071,7 @@ export class DirectClient {
                     } else {
                         elizaLogger.info(`🌐 Anonymous request from IP: ${userInfo.ip} -> userId: ${userId}`);
 
-                        if (!isLocalDevModeActive()) {
+                        if (!isAnonymousBypassActive()) {
                             const since = Date.now() - ANONYMOUS_LIMIT_WINDOW_MS;
                             const recentMessageCount =
                                 await runtime.databaseAdapter.countUserMessages({
@@ -1298,6 +1307,15 @@ export class DirectClient {
                         req.body.name,
                         "direct"
                     );
+
+                    // [persist] Diagnostic: the room a message lands in, keyed
+                    // to the (IP-derived for anonymous) userId. On refresh,
+                    // GET /rooms must return this same roomId for this userId.
+                    if (userInfo.type !== "authenticated") {
+                        elizaLogger.info(
+                            `🌐 [persist] anon message -> userId=${userId} roomId=${roomId} ip=${userInfo.ip}`,
+                        );
+                    }
 
                     enterUsageTrackingContext({
                         userId: String(userId),

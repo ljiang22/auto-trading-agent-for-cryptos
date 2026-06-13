@@ -142,7 +142,7 @@ describe("F11 Coinbase parity — time_in_force variants", () => {
                 if (k === "base_size") {
                     // Quantization may shorten the size string. Just verify
                     // the field is present and convertible to the same number.
-                    expect(parseFloat(String(cfg[k]))).toBeCloseTo(parseFloat(String(v)));
+                    expect(Number.parseFloat(String(cfg[k]))).toBeCloseTo(Number.parseFloat(String(v)));
                 } else {
                     expect(cfg[k]).toBe(v);
                 }

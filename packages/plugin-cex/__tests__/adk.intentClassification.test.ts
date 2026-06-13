@@ -90,6 +90,21 @@ const CASES: Case[] = [
     // create_order — ZH
     { input: "买 0.001 BTC 在 Binance 市价单", expected: "create_order" },
     { input: "卖 1 ETH 价格 3000", expected: "create_order" },
+    // get_orders — order/execution status checks (read). These must NOT be
+    // misread as a write: a status check after an "execute" turn used to get
+    // contaminated by the prior-turn combine retry and blocked as read-only.
+    { input: "check the executing status", expected: "get_orders" },
+    { input: "Can you check the executing status?", expected: "get_orders" },
+    { input: "check my order status", expected: "get_orders" },
+    { input: "what's the status of my order", expected: "get_orders" },
+    { input: "execution status", expected: "get_orders" },
+    { input: "order status please", expected: "get_orders" },
+    // get_orders — status checks ZH
+    { input: "查看订单状态", expected: "get_orders" },
+    { input: "执行状态", expected: "get_orders" },
+    // guard: a bare execute/strategy request has no status/order token, so the
+    // new status rules must NOT turn it into a read.
+    { input: "execute this strategy", expected: null },
     // unclassified
     { input: "hello there", expected: null },
     { input: "what's the weather today?", expected: null },

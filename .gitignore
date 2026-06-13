@@ -1,5 +1,8 @@
 node_modules
 
+# Foundry
+contracts/out/
+contracts/cache/
 
 .env
 .env.production
@@ -7,6 +10,7 @@ node_modules
 .env_main
 .mcp.json
 .dev-auth/
+.cloud-run-env.yaml
 
 concatenated-output.ts
 embedding-cache.json

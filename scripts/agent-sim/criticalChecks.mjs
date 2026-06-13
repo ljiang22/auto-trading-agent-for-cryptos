@@ -20,9 +20,9 @@ const CAPITAL_LIMIT = 1000;
 
 /** Parse a possibly-string numeric ("$5,000" / "0.064" / 5) to a positive number, else NaN. */
 const toNum = (c) => {
-    if (c == null) return NaN;
+    if (c == null) return Number.NaN;
     const n = Number(String(c).replace(/[^0-9.]/g, ""));
-    return Number.isFinite(n) && n > 0 ? n : NaN;
+    return Number.isFinite(n) && n > 0 ? n : Number.NaN;
 };
 
 /** Any present margin signal (leverage > 1, or a cross/isolated margin field) ⇒ leveraged. */
@@ -41,7 +41,7 @@ const hasLeverage = (data) => {
  * symbols/commas. Returns NaN only when nothing is extractable (callers fail CLOSED on NaN).
  */
 export function orderNotionalUsd(data) {
-    if (!data || typeof data !== "object") return NaN;
+    if (!data || typeof data !== "object") return Number.NaN;
     // `notional_usd` is the executed/approved USD notional the CEX order-submit observability step
     // now carries (cexWorkflowMessageHandler) — read it FIRST so a within-limit order is verifiable
     // rather than failing closed on thin telemetry.
@@ -62,7 +62,7 @@ export function orderNotionalUsd(data) {
     const base = toNum(data.base_size);
     const price = priceOf(data) || toNum(data.ticker) || toNum(data.fields?.price);
     if (Number.isFinite(base) && Number.isFinite(price)) return base * price;
-    return NaN;
+    return Number.NaN;
 }
 
 // ── Execution-step recognition (shared, robust, fail-closed) ──────────────────────────────────

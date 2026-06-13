@@ -225,6 +225,11 @@ export function filterActionsByPlugin(
     );
 }
 
+/** Actions from plugins listed under `specialPlugins.mantle`, in `runtime.actions` order. */
+export function getMantleActions(runtime: IAgentRuntime): Action[] {
+    return filterActionsByPluginType(runtime, (t) => t === PluginType.Mantle);
+}
+
 /** Actions from plugins listed under `specialPlugins.trading`, in `runtime.actions` order. */
 export function getCEXActions(runtime: IAgentRuntime): Action[] {
     return filterActionsByPluginType(runtime, t => t === PluginType.Trading);

@@ -20,6 +20,9 @@
         "specialPlugins": {
             "trading": [
               "@elizaos-plugins/plugin-cex"
+            ],
+            "mantle": [
+              "@elizaos-plugins/plugin-mantle-dex"
             ]
         }
     },
@@ -36,7 +39,8 @@
       "@elizaos-plugins/plugin-fearandgreedindex_analysis",
       "@elizaos-plugins/plugin-prediction",
       "@elizaos-plugins/plugin-content-analysis",
-      "@elizaos-plugins/plugin-launchpad"
+      "@elizaos-plugins/plugin-launchpad",
+      "@elizaos-plugins/plugin-mantle-dex"
     ],
     "bio": [
       "emerged from the depths of the 2018 crypto winter with hauntingly accurate predictions that saved countless anons from liquidation",

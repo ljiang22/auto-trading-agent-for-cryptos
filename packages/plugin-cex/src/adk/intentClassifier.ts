@@ -69,6 +69,18 @@ const SIGNALS: ClassifierSignal[] = [
             /\bwhat\s+orders\b/i,
             /\b(any|do\s+i\s+have|have\s+i\s+got)\b.*\borders\b/i,
             /\borders\b.*\b(do\s+i\s+have|i\s+have|exist|are\s+(there|open))\b/i,
+            // Order / execution STATUS checks are reads. Without these, a
+            // status query ("check the executing status") matches no signal,
+            // the ADK retries with prior-turn context, and an earlier
+            // "execute"/"buy" turn flips it to create_order → blocked as
+            // read-only. Kept AFTER get_balance (above) so "check my balance"
+            // still wins; they carry no write verb, so an "execute this
+            // strategy" request (no status/order token) stays unmatched.
+            /\b(order|execution|trade|position|fill)s?\s+status\b/i,
+            /\b(executing|pending|open|filled?)\s+status\b/i,
+            /\bstatus\s+of\b.*\b(order|trade|execution|position|fill)/i,
+            /\bcheck\b.*\bstatus\b/i,
+            /(订单状态|执行状态|成交状态|状态查询)/u,
         ],
     },
     {

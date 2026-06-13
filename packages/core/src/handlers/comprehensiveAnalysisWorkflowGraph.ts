@@ -399,7 +399,7 @@ export function buildActionParams(input: BuildActionParamsInput): Record<string,
  */
 export function createLimitedRunner(): <T>(fn: () => Promise<T>) => Promise<T> {
     const raw = process.env.COMPREHENSIVE_ANALYSIS_CONCURRENCY;
-    const parsed = raw !== undefined ? Number.parseInt(raw, 10) : NaN;
+    const parsed = raw !== undefined ? Number.parseInt(raw, 10) : Number.NaN;
     const concurrency = Number.isFinite(parsed) && parsed >= 1 ? parsed : 3;
     const limit = pLimit(concurrency);
     return <T>(fn: () => Promise<T>) => limit(fn);
@@ -1042,7 +1042,7 @@ async function executeActions(state: ComprehensiveAnalysisStateType): Promise<Pa
         return {};
     };
 
-    const runParallel = async (group: IndexedActionConfig[], limit: number = 2) => {
+    const runParallel = async (group: IndexedActionConfig[], limit = 2) => {
         for (const action of group) {
             if (action.index < startIndex) {
                 latestCompletedIndex = Math.max(latestCompletedIndex, action.index + 1);
@@ -1554,7 +1554,7 @@ export const PROMPT_BUDGET_DEFAULT = 150_000;
 
 function resolvePromptBudget(): number {
     const raw = process.env.COMPREHENSIVE_ANALYSIS_PROMPT_BUDGET;
-    const parsed = raw !== undefined ? Number.parseInt(raw, 10) : NaN;
+    const parsed = raw !== undefined ? Number.parseInt(raw, 10) : Number.NaN;
     return Number.isFinite(parsed) && parsed > 0 ? parsed : PROMPT_BUDGET_DEFAULT;
 }
 

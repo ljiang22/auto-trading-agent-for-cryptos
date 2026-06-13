@@ -12,6 +12,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LoginPrompt } from "@/components/auth/LoginPrompt";
 import { useTranslation } from "react-i18next";
 
+const isPublicAccessClient = () =>
+    import.meta.env.VITE_PUBLIC_ACCESS_MODE === "1";
+
 export default function AgentRoute() {
     const { agentId, roomId } = useParams<{ agentId: UUID; roomId?: UUID }>();
     const navigate = useNavigate();
@@ -42,7 +45,7 @@ export default function AgentRoute() {
         if (rooms.length > 0) {
             // Navigate to the most recent room (first in the list)
             navigate(`/chat/${agentId}/${rooms[0].id}`, { replace: true });
-        } else if (!isAuthenticated) {
+        } else if (!isAuthenticated && !isPublicAccessClient()) {
             // If no rooms exist and user is not authenticated, show login prompt
             setShowLoginPrompt(true);
         }
@@ -50,7 +53,7 @@ export default function AgentRoute() {
     }, [agentId, roomId, roomsData, isLoading, navigate, isAuthenticated]);
 
     const handleCreateRoom = async () => {
-        if (!isAuthenticated) {
+        if (!isAuthenticated && !isPublicAccessClient()) {
             setShowLoginPrompt(true);
             return;
         }
