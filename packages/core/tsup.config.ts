@@ -20,6 +20,7 @@ export default defineConfig({
         "child_process", // Add child_process to external
         "google-auth-library", // Add google-auth-library to external
         "@ai-sdk/google-vertex", // Add AI SDK Google Vertex to external
+        "@elizaos-plugins/plugin-mantle-dex", // Optional runtime plugin (dynamic import)
         // Add other modules you want to externalize
         "onnxruntime-node",
         "sharp",

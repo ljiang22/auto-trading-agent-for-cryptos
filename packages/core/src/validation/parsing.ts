@@ -145,32 +145,30 @@ export function parseJSONObjectFromText(
     let jsonData = null;
     const jsonBlockMatch = text.match(jsonBlockPattern);
 
-    if (jsonBlockMatch) {
-        text = cleanJsonResponse(text);
-        // see issue 3779
-        //const parsingText = normalizeJsonString(text);
+    // Prefer the fenced block's contents; otherwise strip any stray fence
+    // markers from the whole text. Raw line breaks are NOT removed here —
+    // deleting them destroys markdown formatting in string values (headings,
+    // lists) once the parsed text reaches the client.
+    const candidate = (
+        jsonBlockMatch
+            ? jsonBlockMatch[1]
+            : text.replace(/```json\s*/g, "").replace(/```\s*/g, "")
+    ).trim();
+
+    try {
+        // A correctly escaped response parses as-is and keeps its formatting.
+        jsonData = JSON.parse(candidate);
+    } catch {
+        // Models often emit raw control characters inside string values
+        // (invalid JSON). Escape them in place instead of deleting them.
         try {
-            jsonData = JSON.parse(text);
+            jsonData = JSON.parse(
+                escapeRawControlCharsInJsonStrings(candidate)
+            );
         } catch (e) {
             console.error("Error parsing JSON:", e);
-            console.error("Text is not JSON", text);
-            return extractAttributes(text);
-        }
-    } else {
-        const objectPattern = /{[\s\S]*?}?/;
-        const objectMatch = text.match(objectPattern);
-
-        if (objectMatch) {
-            text = cleanJsonResponse(text);
-            // see issue 3779
-	    //const parsingText = normalizeJsonString(text);
-            try {
-                jsonData = JSON.parse(text);
-            } catch (e) {
-                console.error("Error parsing JSON:", e);
-                console.error("Text is not JSON", text);
-                return extractAttributes(text);
-            }
+            console.error("Text is not JSON", candidate);
+            return extractAttributes(candidate);
         }
     }
 
@@ -181,10 +179,66 @@ export function parseJSONObjectFromText(
     ) {
         return jsonData;
     } else if (typeof jsonData === "object" && Array.isArray(jsonData)) {
-        return parseJsonArrayFromText(text);
+        return parseJsonArrayFromText(candidate);
     } else {
         return null;
     }
+}
+
+/**
+ * Escapes raw control characters (newlines, carriage returns, tabs) that
+ * appear INSIDE double-quoted JSON string values, producing parseable JSON
+ * while preserving the line structure of the string content. Characters
+ * outside string values are left untouched (whitespace between tokens is
+ * already valid JSON).
+ *
+ * @param jsonLike - A JSON-like string that may contain raw control characters inside strings.
+ * @returns The same string with in-string control characters escaped.
+ */
+export function escapeRawControlCharsInJsonStrings(jsonLike: string): string {
+    let result = "";
+    let inString = false;
+    let escaped = false;
+
+    for (const ch of jsonLike) {
+        if (!inString) {
+            if (ch === '"') {
+                inString = true;
+            }
+            result += ch;
+            continue;
+        }
+
+        if (escaped) {
+            result += ch;
+            escaped = false;
+            continue;
+        }
+
+        switch (ch) {
+            case "\\":
+                result += ch;
+                escaped = true;
+                break;
+            case '"':
+                inString = false;
+                result += ch;
+                break;
+            case "\n":
+                result += "\\n";
+                break;
+            case "\r":
+                result += "\\r";
+                break;
+            case "\t":
+                result += "\\t";
+                break;
+            default:
+                result += ch;
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -200,25 +254,65 @@ export function extractAttributes(
     response = response.trim();
     const attributes: { [key: string]: string | undefined } = {};
 
+    // String values are matched escape-aware so an escaped quote (\") inside
+    // a value does not terminate the match, then JSON escapes are decoded.
+    const stringValue = '"((?:[^"\\\\]|\\\\[\\s\\S])*)"';
+
     if (!attributesToExtract || attributesToExtract.length === 0) {
         // Extract all attributes if no specific attributes are provided
-        const matches = response.matchAll(/"([^"]+)"\s*:\s*"([^"]*)"?/g);
+        const matches = response.matchAll(
+            new RegExp(`"([^"]+)"\\s*:\\s*${stringValue}`, "g")
+        );
         for (const match of matches) {
-            attributes[match[1]] = match[2];
+            attributes[match[1]] = unescapeJsonString(match[2]);
         }
     } else {
         // Extract only specified attributes
         attributesToExtract.forEach((attribute) => {
             const match = response.match(
-                new RegExp(`"${attribute}"\\s*:\\s*"([^"]*)"?`, "i")
+                new RegExp(`"${attribute}"\\s*:\\s*${stringValue}`, "i")
             );
             if (match) {
-                attributes[attribute] = match[1];
+                attributes[attribute] = unescapeJsonString(match[1]);
             }
         });
     }
 
     return Object.entries(attributes).length > 0 ? attributes : null;
+}
+
+/**
+ * Decodes standard JSON string escape sequences (\" \\ \/ \b \f \n \r \t \uXXXX)
+ * in a regex-extracted string value.
+ */
+function unescapeJsonString(value: string): string {
+    return value.replace(
+        /\\(["\\/bfnrt]|u[0-9a-fA-F]{4})/g,
+        (whole, esc: string) => {
+            switch (esc[0]) {
+                case '"':
+                    return '"';
+                case "\\":
+                    return "\\";
+                case "/":
+                    return "/";
+                case "b":
+                    return "\b";
+                case "f":
+                    return "\f";
+                case "n":
+                    return "\n";
+                case "r":
+                    return "\r";
+                case "t":
+                    return "\t";
+                case "u":
+                    return String.fromCharCode(Number.parseInt(esc.slice(1), 16));
+                default:
+                    return whole;
+            }
+        }
+    );
 }
 
 /**

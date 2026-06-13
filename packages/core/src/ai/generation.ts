@@ -21,7 +21,7 @@ import { encodingForModel, type TiktokenModel } from "js-tiktoken";
 import Together from "together-ai";
 import type { ZodSchema } from "zod";
 import { elizaLogger } from "../utils/logger.ts";
-import { googleApplicationCredentialsFromSetting } from "../utils/googleVertexCredentials.ts";
+import { googleAuthOptionsFromSetting } from "../utils/googleVertexCredentials.ts";
 import { withUsageTracking, trackGenerationUsage } from "../utils/usage.ts";
 import {
     isAnonymousAccount,
@@ -1110,15 +1110,14 @@ export async function generateText({
                     const vertexProject = runtime.getSetting("GOOGLE_VERTEX_PROJECT") ?? "";
                     const vertexLocation = runtime.getSetting("GOOGLE_VERTEX_LOCATION") ?? "global";
                     const vertexHost = vertexLocation === "global" ? "aiplatform.googleapis.com" : `${vertexLocation}-aiplatform.googleapis.com`;
+                    const googleAuthOptions = googleAuthOptionsFromSetting(
+                        runtime.getSetting("GOOGLE_APPLICATION_CREDENTIALS_JSON"),
+                    );
                     const google = createVertex({
                         project: vertexProject,
                         location: vertexLocation,
                         baseURL: `https://${vertexHost}/v1/projects/${vertexProject}/locations/${vertexLocation}/publishers/google`,
-                        googleAuthOptions: {
-                            credentials: googleApplicationCredentialsFromSetting(
-                                runtime.getSetting("GOOGLE_APPLICATION_CREDENTIALS_JSON"),
-                            ),
-                        },
+                        ...(googleAuthOptions ? { googleAuthOptions } : {}),
                     });
 
                     // Calculate input tokens
@@ -3553,15 +3552,14 @@ async function handleGoogle({
     const vertexProject = runtime.getSetting("GOOGLE_VERTEX_PROJECT") ?? "";
     const vertexLocation = runtime.getSetting("GOOGLE_VERTEX_LOCATION") ?? "global";
     const vertexHost = vertexLocation === "global" ? "aiplatform.googleapis.com" : `${vertexLocation}-aiplatform.googleapis.com`;
+    const googleAuthOptions = googleAuthOptionsFromSetting(
+        runtime.getSetting("GOOGLE_APPLICATION_CREDENTIALS_JSON"),
+    );
     const google = createVertex({
         project: vertexProject,
         location: vertexLocation,
         baseURL: `https://${vertexHost}/v1/projects/${vertexProject}/locations/${vertexLocation}/publishers/google`,
-        googleAuthOptions: {
-            credentials: googleApplicationCredentialsFromSetting(
-                runtime.getSetting("GOOGLE_APPLICATION_CREDENTIALS_JSON"),
-            ),
-        },
+        ...(googleAuthOptions ? { googleAuthOptions } : {}),
     });
     
     // Calculate input tokens

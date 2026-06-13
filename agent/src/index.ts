@@ -67,6 +67,7 @@ const __dirname = path.dirname(__filename); // get the name of the directory
 const PLUGIN_ALLOWLIST = new Set<string>([
   ...(process.env.ALLOWED_PLUGINS ?? "").split(",").filter(Boolean),
   "@elizaos-plugins/plugin-cex",
+  "@elizaos-plugins/plugin-mantle-dex",
   "@elizaos-plugins/plugin-charts",
   "@elizaos-plugins/plugin-coinmarketcap",
   "@elizaos-plugins/plugin-content-analysis",

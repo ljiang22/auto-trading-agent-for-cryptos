@@ -2,12 +2,15 @@ import rateLimit from "express-rate-limit";
 
 const rateLimitMessage = { error: "Too many requests, please try again in a minute." };
 
+const isLocalDevMode = () => process.env.LOCAL_DEV_MODE?.trim() === "1";
+
 export const chatLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 10,
+    max: isLocalDevMode() ? 500 : 10,
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
+    skip: () => isLocalDevMode(),
 });
 
 export const ttsLimiter = rateLimit({

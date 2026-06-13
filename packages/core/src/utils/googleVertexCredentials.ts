@@ -39,3 +39,19 @@ export function googleApplicationCredentialsFromSetting(
         return {};
     }
 }
+
+/**
+ * Build ``googleAuthOptions`` for ``@ai-sdk/google-vertex``. When no JSON key is
+ * configured, return ``undefined`` so the Google auth library uses Application
+ * Default Credentials (Cloud Run service account). Passing ``credentials: {}``
+ * breaks ADC and yields "client_email field" errors.
+ */
+export function googleAuthOptionsFromSetting(
+    raw: string | null | undefined,
+): { credentials: Record<string, unknown> } | undefined {
+    const credentials = googleApplicationCredentialsFromSetting(raw);
+    if (Object.keys(credentials).length === 0) {
+        return undefined;
+    }
+    return { credentials };
+}

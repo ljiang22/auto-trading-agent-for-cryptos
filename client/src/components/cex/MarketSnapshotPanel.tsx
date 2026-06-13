@@ -18,7 +18,7 @@
  * the venue label in the heading reflects whatever exchange's API
  * actually served the data.
  */
-import React from "react";
+import type React from "react";
 import { cn } from "@/lib/utils";
 
 const SLIPPAGE_WARN_BPS = 100;

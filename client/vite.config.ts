@@ -47,7 +47,10 @@ export default defineConfig(({ mode }) => {
             "import.meta.env.VITE_SERVER_URL": JSON.stringify(
                 env.SERVER_URL || "http://localhost"
             ),
-            "import.meta.env.VITE_SERVER_BASE_URL": JSON.stringify(serverBaseUrl)
+            "import.meta.env.VITE_SERVER_BASE_URL": JSON.stringify(serverBaseUrl),
+            "import.meta.env.VITE_PUBLIC_ACCESS_MODE": JSON.stringify(
+                env.VITE_PUBLIC_ACCESS_MODE || "0"
+            ),
         },
         root: '.',
         base: '/',

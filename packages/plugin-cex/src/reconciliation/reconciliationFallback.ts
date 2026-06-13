@@ -88,7 +88,7 @@ export interface FallbackPollerConfig {
     unresolvedStreakDowngradeAfter?: number;
 }
 
-export { OnTransitionCallback, StopFn };
+export type { OnTransitionCallback, StopFn };
 
 // ---------------------------------------------------------------------------
 // Constants

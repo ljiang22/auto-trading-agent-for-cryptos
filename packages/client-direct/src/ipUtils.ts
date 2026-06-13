@@ -66,14 +66,67 @@ export function normalizeIP(ip: string): string {
 }
 
 /**
+ * Reduce an IPv6 address to its /64 network prefix (first 4 hextets),
+ * lowercased with leading zeros stripped per hextet. IPv6 clients rotate
+ * their interface identifier (privacy / temporary addresses) while keeping
+ * the same /64, so keying anonymous identity on the /64 keeps a single
+ * stable user across that rotation. Non-IPv6 input is returned unchanged.
+ *
+ * @param ip An IPv6 address (zone id / brackets / port tolerated).
+ * @returns The /64 prefix as a colon-joined string, e.g. "2001:db8:85a3:8d3".
+ */
+export function ipv6To64Prefix(ip: string): string {
+    let addr = ip.trim().toLowerCase();
+    addr = addr.replace(/%.*$/, ""); // strip zone id (e.g. %eth0)
+    if (addr.startsWith("[")) addr = addr.slice(1);
+    addr = addr.replace(/\].*$/, ""); // strip ]:port
+
+    if (!addr.includes(":")) return addr; // not IPv6
+
+    let groups: string[];
+    if (addr.includes("::")) {
+        const [head, tail] = addr.split("::");
+        const headParts = head ? head.split(":") : [];
+        const tailParts = tail ? tail.split(":") : [];
+        const missing = 8 - headParts.length - tailParts.length;
+        groups = [
+            ...headParts,
+            ...Array(Math.max(0, missing)).fill("0"),
+            ...tailParts,
+        ];
+    } else {
+        groups = addr.split(":");
+    }
+
+    const prefix = groups.slice(0, 4).map((g) => {
+        const stripped = g.replace(/^0+(?=.)/, "");
+        return stripped === "" ? "0" : stripped;
+    });
+    while (prefix.length < 4) prefix.push("0");
+    return prefix.join(":");
+}
+
+/**
+ * Stable identity key for an IP address. IPv4 keeps its full address;
+ * IPv6 collapses to its /64 prefix (see {@link ipv6To64Prefix}) so a
+ * client whose temporary IPv6 address rotates keeps one anonymous identity.
+ * Used for deriving the anonymous userId; logging still uses the full
+ * normalized IP via {@link getIPInfo}.
+ */
+export function stableIpIdentityKey(ip: string): string {
+    const normalized = normalizeIP(ip);
+    return normalized.includes(":") ? ipv6To64Prefix(normalized) : normalized;
+}
+
+/**
  * Convert IP address to UUID for database storage
  * @param ip Client IP address
  * @returns UUID representation of the IP
  */
 export function ipToUserId(ip: string): UUID {
-    const normalizedIP = normalizeIP(ip);
-    // Use a consistent prefix to identify IP-based user IDs
-    const ipUserString = `ip-user-${normalizedIP}`;
+    // Key on the stable identity (IPv4 full address, IPv6 /64) so anonymous
+    // history persists across IPv6 temporary-address rotation.
+    const ipUserString = `ip-user-${stableIpIdentityKey(ip)}`;
     return stringToUuid(ipUserString);
 }
 

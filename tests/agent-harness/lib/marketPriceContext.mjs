@@ -127,7 +127,7 @@ export async function loadMarketPriceContext(opts = {}) {
     let source = "fallback";
 
     const override =
-        opts.midOverride != null ? Number.parseFloat(String(opts.midOverride)) : NaN;
+        opts.midOverride != null ? Number.parseFloat(String(opts.midOverride)) : Number.NaN;
     if (!opts.skipFetch && Number.isFinite(override) && override > 0) {
         mid = override;
         source = "override";

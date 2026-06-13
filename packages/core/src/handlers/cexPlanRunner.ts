@@ -40,7 +40,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { elizaLogger } from "../utils/logger.ts";
 import { generateText } from "../ai/generation.ts";
@@ -760,7 +760,7 @@ async function executeReadyReads(
     ctx: RunPlanModeContext,
     planId: string,
 ): Promise<void> {
-    let plan = getActivePlanById(planId);
+    const plan = getActivePlanById(planId);
     if (!plan) return;
 
     const idxs = readableSteps(plan);
@@ -948,8 +948,8 @@ async function fillMissingLimitPrice(
         const productId = typeof params.product_id === "string" ? params.product_id : "BTC-USDT";
         const symbol = productId.replace(/-/g, "").toUpperCase();
         const tick = await provider?.fetchBookTicker?.(symbol, venue);
-        const bid = tick ? Number.parseFloat(tick.bid) : NaN;
-        const ask = tick ? Number.parseFloat(tick.ask) : NaN;
+        const bid = tick ? Number.parseFloat(tick.bid) : Number.NaN;
+        const ask = tick ? Number.parseFloat(tick.ask) : Number.NaN;
         if (Number.isFinite(bid) && Number.isFinite(ask) && bid > 0 && ask > 0) mid = (bid + ask) / 2;
     } catch (err) {
         elizaLogger.warn(

@@ -2,7 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import * as cw from "aws-cdk-lib/aws-cloudwatch";
 import * as cwActions from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as sns from "aws-cdk-lib/aws-sns";
-import { Construct } from "constructs";
+import type { Construct } from "constructs";
 
 export interface SloBurnStackProps extends cdk.StackProps {
     readonly metricNamespace: string;

@@ -1,6 +1,6 @@
 import type { IAgentRuntime, Media, Memory, UUID } from "../core/types.ts";
 import { elizaLogger } from "./logger.ts";
-import { googleApplicationCredentialsFromSetting } from "./googleVertexCredentials.ts";
+import { googleAuthOptionsFromSetting } from "./googleVertexCredentials.ts";
 import { stringToUuid } from "./uuid.ts";
 import { embed } from "../ai/embedding.ts";
 import { createVertex } from "@ai-sdk/google-vertex";
@@ -70,19 +70,14 @@ export class ImageProcessor {
         if (!project) {
             throw new Error("GOOGLE_VERTEX_PROJECT not found in environment variables");
         }
-        if (!credentialsJson) {
-            throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON not found in environment variables");
-        }
-
         const location = this.runtime.getSetting("GOOGLE_VERTEX_LOCATION") ?? "global";
         const host = location === "global" ? "aiplatform.googleapis.com" : `${location}-aiplatform.googleapis.com`;
+        const googleAuthOptions = googleAuthOptionsFromSetting(credentialsJson);
         const google = createVertex({
             project,
             location,
             baseURL: `https://${host}/v1/projects/${project}/locations/${location}/publishers/google`,
-            googleAuthOptions: {
-                credentials: googleApplicationCredentialsFromSetting(credentialsJson),
-            },
+            ...(googleAuthOptions ? { googleAuthOptions } : {}),
         });
 
         // Validate image exists

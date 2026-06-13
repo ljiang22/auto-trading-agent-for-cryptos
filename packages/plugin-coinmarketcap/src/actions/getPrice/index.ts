@@ -735,7 +735,7 @@ export const getPrice: Action = {
                 try {
                     const updatedAtMs = priceData.lastUpdated
                         ? Date.parse(priceData.lastUpdated)
-                        : NaN;
+                        : Number.NaN;
                     if (Number.isFinite(updatedAtMs)) {
                         const ageSec = Math.max(0, Math.round((Date.now() - updatedAtMs) / 1000));
                         const freshness =

@@ -59,7 +59,7 @@ async function streamToString(stream) {
     return Buffer.concat(chunks).toString('utf-8');
 }
 
-function parseNum(v) { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; }
+function parseNum(v) { const n = Number.parseFloat(v); return Number.isFinite(n) ? n : 0; }
 
 function normalizeRow(row) {
     const low = {};
@@ -96,7 +96,7 @@ function normalizeRow(row) {
     const ep = low.expected_positive;
     let value;
     if (ep !== undefined && ep !== '') {
-        const p = parseFloat(ep);
+        const p = Number.parseFloat(ep);
         value = Number.isFinite(p) ? p : ((-sn + (-2/3)*mn + (-1/3)*ldn + (1/3)*ldp + (2/3)*mp + sp) / total);
     } else {
         value = ((-sn + (-2/3)*mn + (-1/3)*ldn + (1/3)*ldp + (2/3)*mp + sp) / total);

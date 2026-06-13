@@ -2,6 +2,41 @@ import { elizaLogger, type AgentRuntime, type UUID } from "@elizaos/core";
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Resolve the anonymous-history inactivity TTL (ms) from the environment.
+ *
+ * Precedence:
+ *   1. `ANONYMOUS_HISTORY_TTL_MS` — explicit override. A positive integer is
+ *      used verbatim; `0` / `off` / `never` / `infinity` / `disabled`
+ *      disables cleanup (returns `Infinity`).
+ *   2. `PUBLIC_ACCESS_MODE=1` with no explicit override — disables cleanup
+ *      (`Infinity`) so the public demo persists anonymous chat by IP
+ *      indefinitely.
+ *   3. Otherwise — the historical 24h default (unchanged for prod/staging).
+ */
+export function resolveAnonymousHistoryTtlMs(
+    env: NodeJS.ProcessEnv = process.env,
+): number {
+    const raw = env.ANONYMOUS_HISTORY_TTL_MS?.trim();
+    if (raw) {
+        const lowered = raw.toLowerCase();
+        if (["0", "off", "never", "infinity", "disabled"].includes(lowered)) {
+            return Number.POSITIVE_INFINITY;
+        }
+        const parsed = Number.parseInt(raw, 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+            return parsed;
+        }
+        // Fall through on malformed values rather than silently disabling.
+    }
+
+    if (env.PUBLIC_ACCESS_MODE?.trim() === "1") {
+        return Number.POSITIVE_INFINITY;
+    }
+
+    return ONE_DAY_IN_MS;
+}
+
 type CleanupOptions = {
     runtime: AgentRuntime;
     userId: UUID;
@@ -241,7 +276,7 @@ export async function cleanupAnonymousHistoryIfExpired({
     runtime,
     userId,
     now = Date.now(),
-    timeoutMs = ONE_DAY_IN_MS,
+    timeoutMs = resolveAnonymousHistoryTtlMs(),
     roomIds,
     force = false,
 }: CleanupOptions): Promise<CleanupResult> {

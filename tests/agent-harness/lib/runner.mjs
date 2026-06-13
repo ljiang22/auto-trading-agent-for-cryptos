@@ -218,7 +218,7 @@ export async function runSuite(options) {
     }
 
     const defaults = suite.defaults || {};
-    let cases = filterCases(
+    const cases = filterCases(
         suite.cases,
         options.filterTags,
         options.filterIds,

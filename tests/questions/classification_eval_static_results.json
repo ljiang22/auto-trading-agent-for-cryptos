@@ -1,49 +1,49 @@
 {
   "fixture": "tests/questions/classification_questions.json",
-  "total": 146,
+  "total": 152,
   "short_circuit": {
-    "hits": 36,
-    "matches_expected": 36,
+    "hits": 43,
+    "matches_expected": 43,
     "false_positives": 0
   },
   "cex_bypass": {
-    "intent_shift_declines": 128,
-    "would_fire": 18,
-    "traps_non_cex_expected": 1
+    "intent_shift_declines": 133,
+    "would_fire": 19,
+    "traps_non_cex_expected": 2
   },
-  "needs_llm": 110,
+  "needs_llm": 109,
   "by_category": {
     "classification_regular": {
-      "total": 33,
-      "short_circuit_hits": 5,
-      "short_circuit_consistent": 5,
-      "bypass_declines": 32,
+      "total": 34,
+      "short_circuit_hits": 6,
+      "short_circuit_consistent": 6,
+      "bypass_declines": 33,
       "bypass_would_fire": 1,
       "needs_llm": 28
     },
     "classification_cex_workflow": {
       "total": 36,
-      "short_circuit_hits": 22,
-      "short_circuit_consistent": 22,
+      "short_circuit_hits": 23,
+      "short_circuit_consistent": 23,
       "bypass_declines": 21,
       "bypass_would_fire": 15,
-      "needs_llm": 14
+      "needs_llm": 13
     },
     "classification_task_chain": {
-      "total": 19,
+      "total": 24,
       "short_circuit_hits": 0,
       "short_circuit_consistent": 0,
-      "bypass_declines": 19,
-      "bypass_would_fire": 0,
-      "needs_llm": 19
+      "bypass_declines": 23,
+      "bypass_would_fire": 1,
+      "needs_llm": 24
     },
     "classification_comprehensive": {
       "total": 30,
-      "short_circuit_hits": 0,
-      "short_circuit_consistent": 0,
+      "short_circuit_hits": 4,
+      "short_circuit_consistent": 4,
       "bypass_declines": 30,
       "bypass_would_fire": 0,
-      "needs_llm": 30
+      "needs_llm": 26
     },
     "classification_non_crypto_trading_guard": {
       "total": 10,
@@ -63,11 +63,11 @@
     },
     "classification_trading_context_shift": {
       "total": 14,
-      "short_circuit_hits": 8,
-      "short_circuit_consistent": 8,
+      "short_circuit_hits": 9,
+      "short_circuit_consistent": 9,
       "bypass_declines": 13,
       "bypass_would_fire": 1,
-      "needs_llm": 6
+      "needs_llm": 5
     }
   },
   "short_circuit_false_positives": [],
@@ -77,6 +77,19 @@
       "category": "classification_regular",
       "question": "I need help planning my workout routine.",
       "expected": "REGULAR_MESSAGE",
+      "short_circuit": null,
+      "short_circuit_verdict": null,
+      "short_circuit_matches_expected": null,
+      "cex_bypass_short": true,
+      "cex_bypass_intent_shift": null,
+      "cex_bypass_would_fire": true,
+      "needs_llm": true
+    },
+    {
+      "id": 440,
+      "category": "classification_task_chain",
+      "question": "I have $1,000 and want to invest in Bitcoin, but I do not know if now is a good time.",
+      "expected": "TASK_CHAIN_MESSAGE",
       "short_circuit": null,
       "short_circuit_verdict": null,
       "short_circuit_matches_expected": null,
@@ -1431,13 +1444,13 @@
       "category": "classification_cex_workflow",
       "question": "Switch to paper mode",
       "expected": "CEX_WORKFLOW_MESSAGE",
-      "short_circuit": null,
-      "short_circuit_verdict": null,
-      "short_circuit_matches_expected": null,
+      "short_circuit": "cex_account_intent",
+      "short_circuit_verdict": "CEX_WORKFLOW_MESSAGE",
+      "short_circuit_matches_expected": true,
       "cex_bypass_short": true,
       "cex_bypass_intent_shift": null,
       "cex_bypass_would_fire": true,
-      "needs_llm": true
+      "needs_llm": false
     },
     {
       "id": 362,
@@ -1467,9 +1480,9 @@
     },
     {
       "id": 371,
-      "category": "classification_regular",
+      "category": "classification_task_chain",
       "question": "Should I rotate from ETH to BTC?",
-      "expected": "REGULAR_MESSAGE",
+      "expected": "TASK_CHAIN_MESSAGE",
       "short_circuit": null,
       "short_circuit_verdict": null,
       "short_circuit_matches_expected": null,
@@ -1480,16 +1493,16 @@
     },
     {
       "id": 372,
-      "category": "classification_regular",
+      "category": "classification_task_chain",
       "question": "Is now a good time to DCA into BTC?",
-      "expected": "REGULAR_MESSAGE",
-      "short_circuit": "price_or_direction_lookup",
-      "short_circuit_verdict": "REGULAR_MESSAGE",
-      "short_circuit_matches_expected": true,
+      "expected": "TASK_CHAIN_MESSAGE",
+      "short_circuit": null,
+      "short_circuit_verdict": null,
+      "short_circuit_matches_expected": null,
       "cex_bypass_short": true,
       "cex_bypass_intent_shift": "topic_shift_question",
       "cex_bypass_would_fire": false,
-      "needs_llm": false
+      "needs_llm": true
     },
     {
       "id": 381,
@@ -1561,39 +1574,39 @@
       "category": "classification_comprehensive",
       "question": "comprehensive analysis on btc",
       "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE",
-      "short_circuit": null,
-      "short_circuit_verdict": null,
-      "short_circuit_matches_expected": null,
+      "short_circuit": "comprehensive_analysis_intent",
+      "short_circuit_verdict": "COMPREHENSIVE_ANALYSIS_MESSAGE",
+      "short_circuit_matches_expected": true,
       "cex_bypass_short": true,
       "cex_bypass_intent_shift": "non_cex_intent",
       "cex_bypass_would_fire": false,
-      "needs_llm": true
+      "needs_llm": false
     },
     {
       "id": 392,
       "category": "classification_comprehensive",
       "question": "comprehensive analysis on eth",
       "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE",
-      "short_circuit": null,
-      "short_circuit_verdict": null,
-      "short_circuit_matches_expected": null,
+      "short_circuit": "comprehensive_analysis_intent",
+      "short_circuit_verdict": "COMPREHENSIVE_ANALYSIS_MESSAGE",
+      "short_circuit_matches_expected": true,
       "cex_bypass_short": true,
       "cex_bypass_intent_shift": "non_cex_intent",
       "cex_bypass_would_fire": false,
-      "needs_llm": true
+      "needs_llm": false
     },
     {
       "id": 393,
       "category": "classification_comprehensive",
       "question": "Comprehensive analysis on SOL",
       "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE",
-      "short_circuit": null,
-      "short_circuit_verdict": null,
-      "short_circuit_matches_expected": null,
+      "short_circuit": "comprehensive_analysis_intent",
+      "short_circuit_verdict": "COMPREHENSIVE_ANALYSIS_MESSAGE",
+      "short_circuit_matches_expected": true,
       "cex_bypass_short": true,
       "cex_bypass_intent_shift": "non_cex_intent",
       "cex_bypass_would_fire": false,
-      "needs_llm": true
+      "needs_llm": false
     },
     {
       "id": 394,
@@ -1626,13 +1639,13 @@
       "category": "classification_comprehensive",
       "question": "Full BTC comprehensive analysis",
       "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE",
-      "short_circuit": null,
-      "short_circuit_verdict": null,
-      "short_circuit_matches_expected": null,
+      "short_circuit": "comprehensive_analysis_intent",
+      "short_circuit_verdict": "COMPREHENSIVE_ANALYSIS_MESSAGE",
+      "short_circuit_matches_expected": true,
       "cex_bypass_short": true,
       "cex_bypass_intent_shift": "non_cex_intent",
       "cex_bypass_would_fire": false,
-      "needs_llm": true
+      "needs_llm": false
     },
     {
       "id": 397,
@@ -1730,13 +1743,13 @@
       "category": "classification_trading_context_shift",
       "question": "comprehensive analysis on btc",
       "expected": "COMPREHENSIVE_ANALYSIS_MESSAGE",
-      "short_circuit": null,
-      "short_circuit_verdict": null,
-      "short_circuit_matches_expected": null,
+      "short_circuit": "comprehensive_analysis_intent",
+      "short_circuit_verdict": "COMPREHENSIVE_ANALYSIS_MESSAGE",
+      "short_circuit_matches_expected": true,
       "cex_bypass_short": true,
       "cex_bypass_intent_shift": "non_cex_intent",
       "cex_bypass_would_fire": false,
-      "needs_llm": true
+      "needs_llm": false
     },
     {
       "id": 415,
@@ -1984,6 +1997,84 @@
       "cex_bypass_intent_shift": "fresh_trading_verb",
       "cex_bypass_would_fire": false,
       "needs_llm": false
+    },
+    {
+      "id": 440,
+      "category": "classification_task_chain",
+      "question": "I have $1,000 and want to invest in Bitcoin, but I do not know if now is a good time.",
+      "expected": "TASK_CHAIN_MESSAGE",
+      "short_circuit": null,
+      "short_circuit_verdict": null,
+      "short_circuit_matches_expected": null,
+      "cex_bypass_short": true,
+      "cex_bypass_intent_shift": null,
+      "cex_bypass_would_fire": true,
+      "needs_llm": true
+    },
+    {
+      "id": 441,
+      "category": "classification_task_chain",
+      "question": "Should I buy BTC now?",
+      "expected": "TASK_CHAIN_MESSAGE",
+      "short_circuit": null,
+      "short_circuit_verdict": null,
+      "short_circuit_matches_expected": null,
+      "cex_bypass_short": true,
+      "cex_bypass_intent_shift": "fresh_trading_verb",
+      "cex_bypass_would_fire": false,
+      "needs_llm": true
+    },
+    {
+      "id": 442,
+      "category": "classification_task_chain",
+      "question": "Is now a good time to invest in Bitcoin?",
+      "expected": "TASK_CHAIN_MESSAGE",
+      "short_circuit": null,
+      "short_circuit_verdict": null,
+      "short_circuit_matches_expected": null,
+      "cex_bypass_short": true,
+      "cex_bypass_intent_shift": "topic_shift_question",
+      "cex_bypass_would_fire": false,
+      "needs_llm": true
+    },
+    {
+      "id": 443,
+      "category": "classification_regular",
+      "question": "Is BTC up today?",
+      "expected": "REGULAR_MESSAGE",
+      "short_circuit": "price_or_direction_lookup",
+      "short_circuit_verdict": "REGULAR_MESSAGE",
+      "short_circuit_matches_expected": true,
+      "cex_bypass_short": true,
+      "cex_bypass_intent_shift": "topic_shift_question",
+      "cex_bypass_would_fire": false,
+      "needs_llm": false
+    },
+    {
+      "id": 444,
+      "category": "classification_regular",
+      "question": "Is BTC up or down?",
+      "expected": "REGULAR_MESSAGE",
+      "short_circuit": "price_or_direction_lookup",
+      "short_circuit_verdict": "REGULAR_MESSAGE",
+      "short_circuit_matches_expected": true,
+      "cex_bypass_short": true,
+      "cex_bypass_intent_shift": "topic_shift_question",
+      "cex_bypass_would_fire": false,
+      "needs_llm": false
+    },
+    {
+      "id": 445,
+      "category": "classification_regular",
+      "question": "Is now a good time to buy Tesla stock?",
+      "expected": "REGULAR_MESSAGE",
+      "short_circuit": null,
+      "short_circuit_verdict": null,
+      "short_circuit_matches_expected": null,
+      "cex_bypass_short": true,
+      "cex_bypass_intent_shift": "fresh_trading_verb",
+      "cex_bypass_would_fire": false,
+      "needs_llm": true
     }
   ]
 }

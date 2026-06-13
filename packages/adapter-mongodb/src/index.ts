@@ -32,7 +32,7 @@ import type {
     UUID,
 } from "@elizaos/core";
 import {
-    Db,
+    type Db,
     MongoClient,
     MongoServerError,
     type MongoClientOptions,

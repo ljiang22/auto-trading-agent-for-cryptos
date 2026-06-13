@@ -42,7 +42,7 @@ import {
 } from "@elizaos/core";
 
 import { resolveExchangeCredentials } from "./shared";
-import { BinanceAccountsService } from "../exchanges/services/binance";
+import type { BinanceAccountsService } from "../exchanges/services/binance";
 import { createExchangeService } from "../exchanges/registry";
 import type { ResolvedExchangeCredentials } from "../types";
 

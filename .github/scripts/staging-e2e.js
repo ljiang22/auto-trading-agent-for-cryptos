@@ -35,21 +35,21 @@ function classifyText(text) {
 }
 
 async function getAgentMemoryCount(page, agentId, roomId) {
-  return page.evaluate(async function(args) {
+  return page.evaluate(async (args) => {
     try {
       var r = await fetch('/agents/' + args.aid + '/' + args.rid + '/memories', { credentials: 'include' });
       var data = await r.json();
-      return (data.memories || []).filter(function(m) { return m.userId === args.aid; }).length;
+      return (data.memories || []).filter((m) => m.userId === args.aid).length;
     } catch(e) { return -1; }
   }, { aid: agentId, rid: roomId });
 }
 
 async function getLatestAgentMemory(page, agentId, roomId) {
-  return page.evaluate(async function(args) {
+  return page.evaluate(async (args) => {
     try {
       var r = await fetch('/agents/' + args.aid + '/' + args.rid + '/memories', { credentials: 'include' });
       var data = await r.json();
-      var agentMems = (data.memories || []).filter(function(m) { return m.userId === args.aid; });
+      var agentMems = (data.memories || []).filter((m) => m.userId === args.aid);
       return agentMems.length > 0 ? agentMems[agentMems.length - 1] : null;
     } catch(e) { return null; }
   }, { aid: agentId, rid: roomId });
@@ -66,23 +66,23 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
   return false;
 }
 
-(async function() {
+(async () => {
   var report = { sidebar_chat_count: 0, questions: [], login_ok: false, error: null };
 
   // Pre-check: verify credentials work against the Django auth API before launching browser
   if (EMAIL && PASSWORD) {
     try {
       var https = require('https');
-      var loginCheck = await new Promise(function(resolve, reject) {
+      var loginCheck = await new Promise((resolve, reject) => {
         var body = JSON.stringify({ email: EMAIL, password: PASSWORD });
         var req = https.request('https://api.sentiedge.ai/api/authentication/validation/', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-        }, function(res) {
+        }, (res) => {
           var data = '';
-          res.on('data', function(c) { data += c; });
-          res.on('end', function() { resolve({ status: res.statusCode, body: data.slice(0, 200) }); });
+          res.on('data', (c) => { data += c; });
+          res.on('end', () => { resolve({ status: res.statusCode, body: data.slice(0, 200) }); });
         });
-        req.on('error', function(e) { reject(e); });
+        req.on('error', (e) => { reject(e); });
         req.write(body);
         req.end();
       });
@@ -107,34 +107,34 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
 
   var consoleErrors = [];
   var failedRequests = [];
-  page.on('console', function(msg) { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
-  page.on('requestfailed', function(req) { failedRequests.push(req.failure().errorText + ' ' + req.url()); });
+  page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+  page.on('requestfailed', (req) => { failedRequests.push(req.failure().errorText + ' ' + req.url()); });
 
   // Intercept asset responses to capture full diagnostic info
   // Log API responses (login, billing, etc.) for diagnostics
-  page.on('response', function(apiResp) {
+  page.on('response', (apiResp) => {
     var apiUrl = apiResp.url();
     if (apiUrl.indexOf('sentiedge.ai') !== -1 && apiUrl.indexOf('/assets/') === -1) {
       var s = apiResp.status();
-      apiResp.text().then(function(body) {
+      apiResp.text().then((body) => {
         console.log('[API] ' + s + ' ' + apiUrl.replace(/https?:\/\/[^/]+/, '') + ' body=' + body.slice(0, 150));
-      }).catch(function() {});
+      }).catch(() => {});
     }
   });
 
-  page.on('response', function(resp) {
+  page.on('response', (resp) => {
     var url = resp.url();
     if (url.indexOf('/assets/') !== -1 && (url.slice(-3) === '.js' || url.slice(-4) === '.css')) {
       var status = resp.status();
       var respHdrs = resp.headers();
-      resp.request().allHeaders().then(function(reqHdrs) {
-        resp.body().then(function(buf) {
+      resp.request().allHeaders().then((reqHdrs) => {
+        resp.body().then((buf) => {
           var body = buf.toString('utf8').slice(0, 100);
           console.log('[ASSET] status=' + status + ' ct=' + (respHdrs['content-type'] || 'none') + ' file=' + url.split('/').pop());
           console.log('[ASSET-REQ] sec-fetch-dest=' + reqHdrs['sec-fetch-dest'] + ' sec-fetch-site=' + reqHdrs['sec-fetch-site'] + ' accept=' + reqHdrs['accept']);
           console.log('[ASSET-BODY] ' + body);
-        }).catch(function() {});
-      }).catch(function() {});
+        }).catch(() => {});
+      }).catch(() => {});
     }
   });
 
@@ -144,8 +144,8 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
     console.log('  URL after load:', page.url());
 
     var title = await page.title();
-    var bodyLen = await page.evaluate(function() { return document.body ? document.body.innerHTML.length : -1; });
-    var bodySnippet = await page.evaluate(function() { return document.body ? document.body.innerHTML.slice(0, 200) : 'NO BODY'; });
+    var bodyLen = await page.evaluate(() => document.body ? document.body.innerHTML.length : -1);
+    var bodySnippet = await page.evaluate(() => document.body ? document.body.innerHTML.slice(0, 200) : 'NO BODY');
     console.log('  Title:', title, '| body HTML length:', bodyLen);
     console.log('  Body snippet:', bodySnippet);
     if (consoleErrors.length) console.log('  JS errors:', consoleErrors.slice(0, 3).join(' | '));
@@ -165,7 +165,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
     await page.screenshot({ path: 'screenshots/02_signin_filled.png', fullPage: true });
 
     await Promise.all([
-      page.waitForURL(function(url) { return url.toString().indexOf('signin') === -1 && url.toString().indexOf('login') === -1; }, { timeout: 25000 }).catch(function() {}),
+      page.waitForURL((url) => url.toString().indexOf('signin') === -1 && url.toString().indexOf('login') === -1, { timeout: 25000 }).catch(() => {}),
       page.locator('button[type="submit"], button:has-text("Sign in"), button:has-text("Login")').first().click(),
     ]);
 
@@ -174,7 +174,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
 
     // Capture any visible error on the signin page
     if (page.url().indexOf('signin') !== -1 || page.url().indexOf('login') !== -1) {
-      var errorText = await page.locator('[class*="toast"], [class*="error"], [role="alert"], [class*="alert"]').first().textContent().catch(function() { return ''; });
+      var errorText = await page.locator('[class*="toast"], [class*="error"], [role="alert"], [class*="alert"]').first().textContent().catch(() => '');
       var jsErrs = consoleErrors.slice(-3).join(' | ');
       console.log('  Login error on page:', errorText || '(no toast/alert found)');
       if (jsErrs) console.log('  Console errors:', jsErrs);
@@ -185,17 +185,15 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
     // Navigate to /agents and try to click the Chat button (UI-based flow)
     await page.goto(BASE_URL + '/agents', { waitUntil: 'load', timeout: 25000 });
     // Wait for the agents API response to populate the React card list
-    await page.waitForResponse(function(resp) {
-      return resp.url().indexOf('/agents') !== -1 && resp.status() === 200;
-    }, { timeout: 10000 }).catch(function() {});
+    await page.waitForResponse((resp) => resp.url().indexOf('/agents') !== -1 && resp.status() === 200, { timeout: 10000 }).catch(() => {});
     await page.waitForTimeout(2000);
     await page.screenshot({ path: 'screenshots/04_agents_page.png', fullPage: true });
     console.log('[3] /agents URL:', page.url());
 
     // Dump DOM to debug what buttons are present
-    var btnDump = await page.evaluate(function() {
+    var btnDump = await page.evaluate(() => {
       var btns = Array.from(document.querySelectorAll('button'));
-      return btns.slice(0, 20).map(function(b) {
+      return btns.slice(0, 20).map((b) => {
         var rect = b.getBoundingClientRect();
         return b.textContent.trim().slice(0, 40) + '|cls=' + b.className.slice(0, 60) + '|vis=' + (rect.width > 0 && rect.height > 0);
       });
@@ -209,7 +207,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
       await chatBtnLocator.waitFor({ state: 'attached', timeout: 8000 });
       await chatBtnLocator.scrollIntoViewIfNeeded();
       await chatBtnLocator.click({ force: true, timeout: 5000 });
-      await page.waitForURL(function(url) { return url.toString().indexOf('/chat/') !== -1; }, { timeout: 12000 });
+      await page.waitForURL((url) => url.toString().indexOf('/chat/') !== -1, { timeout: 12000 });
       chatClicked = true;
       console.log('[3b] Chat button clicked — navigated to:', page.url());
     } catch (btnErr) {
@@ -218,7 +216,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
 
     // API fallback: if Chat button click did not navigate us to a chat room
     if (!chatClicked) {
-      var agentsData = await page.evaluate(async function() {
+      var agentsData = await page.evaluate(async () => {
         var r = await fetch('/agents', { credentials: 'include' });
         return r.json();
       });
@@ -226,7 +224,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
       if (!agentId) { throw new Error('No agents returned from /agents API'); }
       console.log('[3a] AgentId (API fallback):', agentId);
 
-      var roomsData = await page.evaluate(async function(aid) {
+      var roomsData = await page.evaluate(async (aid) => {
         var r = await fetch('/agents/' + aid + '/rooms', { credentials: 'include' });
         return r.json();
       }, agentId);
@@ -236,7 +234,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
         report.sidebar_chat_count = roomsData.rooms.length;
         console.log('[3b] Using existing room:', roomId, '(' + roomsData.rooms.length + ' total)');
       } else {
-        var newRoom = await page.evaluate(async function(aid) {
+        var newRoom = await page.evaluate(async (aid) => {
           var r = await fetch('/agents/' + aid + '/rooms', {
             method: 'POST',
             credentials: 'include',
@@ -315,7 +313,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
   } catch (err) {
     console.error('E2E ERROR:', err.message);
     report.error = err.message;
-    await page.screenshot({ path: 'screenshots/error_state.png', fullPage: true }).catch(function() {});
+    await page.screenshot({ path: 'screenshots/error_state.png', fullPage: true }).catch(() => {});
   } finally {
     await browser.close();
     fs.writeFileSync('e2e-report.json', JSON.stringify(report, null, 2));
@@ -324,7 +322,7 @@ async function waitForNewAgentMemory(page, agentId, roomId, countBefore, maxWait
     if (report.questions.length) {
       console.log('=== E2E Summary ===');
       console.log('Login OK:', report.login_ok);
-      report.questions.forEach(function(q, idx) {
+      report.questions.forEach((q, idx) => {
         var icon = q.response_type === 'good' ? 'PASS' : q.response_type === 'fallback' ? 'WARN' : 'FAIL';
         console.log(icon, 'Q' + (idx + 1), '|', q.response_type.toUpperCase().padEnd(8), '|', String(q.response_time_ms).padStart(6) + 'ms', '|', q.has_chart ? '[chart]' : '       ', '|', q.question.slice(0, 55));
       });

@@ -26,11 +26,17 @@ import { evaluateShortCircuit, LangGraphPrecheckService } from "../handlers/lang
 import { handleRegularMessage } from "../handlers/regularMessageHandler.ts";
 import { getCEXAuthRequiredErrorTemplate } from "../templates/cexMessageTemplate.ts";
 import { detectLocale } from "../utils/languageUtils.ts";
+import { isPublicAccessModeActive } from "../utils/publicAccessMode.ts";
+import { seedPublicAccessPaperTrading } from "../utils/publicAccessSeed.ts";
 import {
     handleComprehensiveAnalysis,
     isDailySchedulerMessage,
 } from "../handlers/comprehensiveAnalysisWorkflowGraph.ts";
 import { handleCEXWorkflowMessage } from "../handlers/cexWorkflowMessageHandler.ts";
+import {
+    handleMantleWorkflowMessage,
+    shouldRouteMantleApprovalContinuation,
+} from "../handlers/mantleWorkflowMessageHandler.ts";
 import { generateComprehensiveAnalysisSnapshot } from "../utils/comprehensiveAnalysisSnapshot.ts";
 import { logMemProbe, withMemProbe } from "../utils/memoryProbe.ts";
 import { withSpan } from "../utils/tracing.ts";
@@ -1604,6 +1610,10 @@ export class AgentRuntime implements IAgentRuntime {
             });
             elizaLogger.success(`User ${userName} created successfully.`);
         }
+
+        if (isPublicAccessModeActive()) {
+            await seedPublicAccessPaperTrading(this, userId);
+        }
     }
 
     async ensureParticipantInRoom(userId: UUID, roomId: UUID) {
@@ -2318,7 +2328,7 @@ Text: ${attachment.text}
             const contentMeta = message.content?.metadata && typeof message.content.metadata === "object"
                 ? (message.content.metadata as Record<string, unknown>)
                 : {};
-            if (contentMeta.isAnonymous === true) {
+            if (contentMeta.isAnonymous === true && !isPublicAccessModeActive()) {
                 // Fix 9 — honest auth-required reply for CEX intent.
                 //
                 // Before this guard ran, every anonymous message was force-
@@ -2613,6 +2623,51 @@ Text: ${attachment.text}
 
             const favoriteChainAttachment = this.extractFavoriteTaskChainFromMessage(message);
 
+            // Mantle two-turn approval: approve/cancel must reach the Mantle handler
+            // when a pending swap exists for this room+user (in-memory, 15 min TTL).
+            try {
+                const mantleFollowUpText =
+                    typeof message.content?.text === "string"
+                        ? message.content.text.trim()
+                        : "";
+                if (
+                    mantleFollowUpText
+                    && message.userId
+                    && message.roomId
+                    && shouldRouteMantleApprovalContinuation(
+                        mantleFollowUpText,
+                        message.roomId,
+                        message.userId,
+                    )
+                ) {
+                    elizaLogger.info(
+                        "[Runtime] Mantle approval follow-up → Mantle workflow",
+                    );
+                    const mantleMetadata =
+                        message.content.metadata
+                        && typeof message.content.metadata === "object"
+                            ? { ...(message.content.metadata as Record<string, unknown>) }
+                            : {};
+                    mantleMetadata.classification = "MANTLE_WORKFLOW_MESSAGE";
+                    mantleMetadata.classificationConfidence = 1;
+                    mantleMetadata.classificationReasoning =
+                        "Mantle approval continuation with pending swap";
+                    mantleMetadata.isCryptoRelated = true;
+                    message.content.metadata = mantleMetadata;
+                    return await this.handleMantleWorkflowMessage(
+                        message,
+                        callback,
+                        streamingCallback,
+                        intermediateResponseCallback,
+                        onToken,
+                    );
+                }
+            } catch (err) {
+                elizaLogger.warn(
+                    `[Runtime] Mantle approval continuation routing failed (fail-open): ${err instanceof Error ? err.message : String(err)}`,
+                );
+            }
+
             if (favoriteChainAttachment) {
                 elizaLogger.info("[Runtime] Favorite task chain attachment detected – bypassing precheck classifier");
 
@@ -2684,6 +2739,10 @@ Text: ${attachment.text}
                     // generates. Other CEX branches (single-order, balance,
                     // etc.) ignore it.
                     return await this.handleCEXWorkflowMessage(message, callback, streamingCallback, intermediateResponseCallback, onToken);
+
+                case 'MANTLE_WORKFLOW_MESSAGE':
+                    elizaLogger.info(`[Runtime] Routing to Mantle workflow handler`);
+                    return await this.handleMantleWorkflowMessage(message, callback, streamingCallback, intermediateResponseCallback, onToken);
 
                 case 'COMPREHENSIVE_ANALYSIS_MESSAGE':
                     elizaLogger.info(`[Runtime] Routing to comprehensive analysis handler`);
@@ -2829,6 +2888,24 @@ Text: ${attachment.text}
     ): Promise<Memory[]> {
         elizaLogger.info(`[Runtime] Processing CEX workflow message`);
         return await handleCEXWorkflowMessage(this, message, callback, streamingCallback, intermediateResponseCallback, onToken);
+    }
+
+    async handleMantleWorkflowMessage(
+        message: Memory,
+        callback?: HandlerCallback,
+        streamingCallback?: StreamingCallback,
+        intermediateResponseCallback?: (response: Memory) => void,
+        onToken?: (delta: string) => Promise<void> | void,
+    ): Promise<Memory[]> {
+        elizaLogger.info(`[Runtime] Processing Mantle workflow message`);
+        return await handleMantleWorkflowMessage(
+            this,
+            message,
+            callback,
+            streamingCallback,
+            intermediateResponseCallback,
+            onToken,
+        );
     }
 
     /**

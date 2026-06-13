@@ -22,6 +22,7 @@
         "@elizaos/client-direct": "workspace:*",
         "@elizaos/core": "workspace:*",
         "@elizaos-plugins/plugin-cex": "workspace:*",
+        "@elizaos-plugins/plugin-mantle-dex": "workspace:*",
         "@elizaos-plugins/adapter-mongodb": "workspace:*",
         "@elizaos-plugins/adapter-sqlite": "workspace:*",
         "@elizaos-plugins/plugin-charts": "workspace:*",

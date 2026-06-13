@@ -28,6 +28,7 @@ import {
     ModelProviderName,
     type UUID,
     validateCharacterConfig,
+    isPublicAccessModeActive,
     ServiceType,
     type Character,
     type TaskChain,
@@ -365,16 +366,16 @@ const PRUNE_EMPTY_ROOM_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const parseRoomCreatedAtMs = (value: unknown): number => {
     if (typeof value === "number") {
-        return Number.isFinite(value) ? value : NaN;
+        return Number.isFinite(value) ? value : Number.NaN;
     }
     if (typeof value === "string") {
         if (/^\d+$/.test(value)) {
             const n = Number(value);
-            return Number.isFinite(n) ? n : NaN;
+            return Number.isFinite(n) ? n : Number.NaN;
         }
         return new Date(value).getTime();
     }
-    return NaN;
+    return Number.NaN;
 };
 
 async function pruneEmptyRooms(
@@ -1563,9 +1564,9 @@ export async function getMongoAnalyticsSummaryData(mongoDb: any) {
     const loggedInVisitorsDailyMap = new Map<string, Set<string>>();
     const hourlyMainMap = new Map<string, SessionAccumulator>();
 
-    let mainTotal = { sessions: 0, visitors: new Set<string>(), durationSum: 0, durationCount: 0 };
-    let signupTotal = { sessions: 0, visitors: new Set<string>(), durationSum: 0, durationCount: 0 };
-    let registerTotal = { sessions: 0, visitors: new Set<string>(), durationSum: 0, durationCount: 0 };
+    const mainTotal = { sessions: 0, visitors: new Set<string>(), durationSum: 0, durationCount: 0 };
+    const signupTotal = { sessions: 0, visitors: new Set<string>(), durationSum: 0, durationCount: 0 };
+    const registerTotal = { sessions: 0, visitors: new Set<string>(), durationSum: 0, durationCount: 0 };
     const mainAnonymousTotalVisitors = new Set<string>();
     const registerAnonymousTotalVisitors = new Set<string>();
     const mainAuthTotals = {
@@ -4802,6 +4803,36 @@ export function createApiRouter(
                         : {}),
                     // actionData in metadata (used for image display in action results)
                     ...(meta.actionData !== undefined ? { actionData: meta.actionData } : {}),
+                    // Mantle on-chain execution (MantleExecutionLinks in chat UI)
+                    ...(meta.classification !== undefined
+                        ? { classification: meta.classification }
+                        : {}),
+                    ...(typeof meta.chainId === "number" ? { chainId: meta.chainId } : {}),
+                    ...(typeof meta.txHash === "string" ? { txHash: meta.txHash } : {}),
+                    ...(typeof meta.explorerUrl === "string"
+                        ? { explorerUrl: meta.explorerUrl }
+                        : {}),
+                    ...(typeof meta.auditTxHash === "string"
+                        ? { auditTxHash: meta.auditTxHash }
+                        : {}),
+                    ...(typeof meta.intentHash === "string"
+                        ? { intentHash: meta.intentHash }
+                        : {}),
+                    ...(meta.mantleExecution === true
+                        ? { mantleExecution: true }
+                        : {}),
+                    ...(meta.pending === true ? { pending: true } : {}),
+                    ...(meta.cancelled === true ? { cancelled: true } : {}),
+                    ...(meta.noPending === true ? { noPending: true } : {}),
+                    ...(meta.risk && typeof meta.risk === "object"
+                        ? {
+                              risk: {
+                                  verdict: (meta.risk as { verdict?: unknown }).verdict,
+                                  rulesFired: (meta.risk as { rulesFired?: unknown })
+                                      .rulesFired,
+                              },
+                          }
+                        : {}),
                 };
             };
 
@@ -5417,7 +5448,10 @@ export function createApiRouter(
     });
 
     // Task chain approval endpoint for human-in-the-loop
-    router.post("/agents/:agentId/task-chain/approval", requireAuth, async (req, res) => {
+    router.post(
+        "/agents/:agentId/task-chain/approval",
+        isPublicAccessModeActive() ? authMiddleware : requireAuth,
+        async (req, res) => {
         const { agentId } = validateUUIDParams(req.params, res) ?? {
             agentId: null,
         };
@@ -7580,6 +7614,12 @@ export function createApiRouter(
                 elizaLogger.info(`🌐 Getting agent-specific rooms for IP: ${userInfo.ip} -> userId: ${userId}, agentId: ${runtime.agentId}`);
                 const cleanupResult = await cleanupAnonymousHistoryIfExpired({ runtime, userId });
                 roomIds = cleanupResult.cleaned ? [] : cleanupResult.roomIds;
+                // [persist] Diagnostic: confirms the IP-derived userId is stable
+                // across refreshes and that the user's rooms are found. Compare
+                // userId between two refreshes — a shift means the IP key moved.
+                elizaLogger.info(
+                    `🌐 [persist] anon rooms resolved: userId=${userId} ip=${userInfo.ip} count=${roomIds.length} cleaned=${cleanupResult.cleaned}`,
+                );
                 if (cleanupResult.cleaned) {
                     const lastActivityIso = cleanupResult.lastActivity
                         ? new Date(cleanupResult.lastActivity).toISOString()
@@ -7596,16 +7636,16 @@ export function createApiRouter(
             // Process in chunks to avoid overwhelming MongoDB with concurrent sorts
             const parseCreatedAt = (raw: unknown): number => {
                 if (typeof raw === "number") {
-                    return Number.isFinite(raw) ? raw : NaN;
+                    return Number.isFinite(raw) ? raw : Number.NaN;
                 }
                 if (typeof raw === "string") {
                     if (/^\d+$/.test(raw)) {
                         const n = Number(raw);
-                        return Number.isFinite(n) ? n : NaN;
+                        return Number.isFinite(n) ? n : Number.NaN;
                     }
                     return new Date(raw).getTime();
                 }
-                return NaN;
+                return Number.NaN;
             };
 
             const rooms = [];
@@ -8888,7 +8928,7 @@ ${feedback}
                 res.status(500).json({ success: false, message: "Database not available" });
                 return;
             }
-            const limit = Math.max(1, Math.min(parseInt(String(req.query.limit ?? "100"), 10) || 100, 500));
+            const limit = Math.max(1, Math.min(Number.parseInt(String(req.query.limit ?? "100"), 10) || 100, 500));
             const venue = typeof req.query.venue === "string" ? req.query.venue : undefined;
             const state = typeof req.query.state === "string" ? req.query.state : undefined;
             const orders = await db.listUserOrders(userInfo.userId, { limit, venue, state });
@@ -9046,7 +9086,7 @@ ${feedback}
                 res.status(500).json({ success: false, message: "Database not available" });
                 return;
             }
-            const limit = Math.max(1, Math.min(parseInt(String(req.query.limit ?? "50"), 10) || 50, 200));
+            const limit = Math.max(1, Math.min(Number.parseInt(String(req.query.limit ?? "50"), 10) || 50, 200));
             const unreadOnly = String(req.query.unreadOnly ?? "") === "true";
             const notifications = await db.listNotifications(userInfo.userId, {
                 limit,

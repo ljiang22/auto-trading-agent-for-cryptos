@@ -23,12 +23,12 @@ import { execFile } from "node:child_process";
 /** RFC3339 → epoch ms (Cloud Trace v1 uses RFC3339 timestamps). NaN when unparseable. */
 export function rfc3339Ms(s) {
     const t = Date.parse(s);
-    return Number.isNaN(t) ? NaN : t;
+    return Number.isNaN(t) ? Number.NaN : t;
 }
 
 export function spanDurationMs(span) {
     const d = rfc3339Ms(span?.endTime) - rfc3339Ms(span?.startTime);
-    return Number.isFinite(d) && d >= 0 ? d : NaN;
+    return Number.isFinite(d) && d >= 0 ? d : Number.NaN;
 }
 
 /** Linear-interpolated percentile (p in [0,100]) over finite values; null when empty. */

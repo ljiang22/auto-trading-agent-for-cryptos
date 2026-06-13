@@ -1,0 +1,551 @@
+{
+  "at": "2026-06-13T14:32:28.726Z",
+  "base": "http://localhost:3000",
+  "chainId": "5003",
+  "results": [
+    {
+      "id": "B1",
+      "status": "PASS",
+      "message": "swap 5 USDC to WMNT on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "Quote failed: Request failed with status code 400\n\n**Risk summary:** passed demo checks.\nIntent hash: `0xe18851d651f0277b96ce0dbab0cb9fb749a784785cd7f406bf2a79c5323edc53`\n\nReply **`approve`** to execute on Mantle, or **`cancel`** to abort.\n\n> **Disclosure:** Server demo wallet signs this swap (MVP). Explorer link follows execution.\n",
+      "steps": [
+        "mantle_quote",
+        "mantle_quote"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "pending": true,
+        "intentHash": "0xe18851d651f0277b96ce0dbab0cb9fb749a784785cd7f406bf2a79c5323edc53"
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "B2",
+      "status": "PASS",
+      "message": "convert 10 USDC to WMNT on mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "Quote failed: Request failed with status code 400\n\n**Risk summary:** passed demo checks.\nIntent hash: `0xe4e72087ea3194c6f44f3f29c3eea408e74790cde02b09a35abaf3d4365aed89`\n\nReply **`approve`** to execute on Mantle, or **`cancel`** to abort.\n\n> **Disclosure:** Server demo wallet signs this swap (MVP). Explorer link follows execution.\n",
+      "steps": [
+        "mantle_quote",
+        "mantle_quote"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "pending": true,
+        "intentHash": "0xe4e72087ea3194c6f44f3f29c3eea408e74790cde02b09a35abaf3d4365aed89"
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "B3",
+      "status": "PASS",
+      "message": "exchange 1 USDC for WMNT on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "Quote failed: Request failed with status code 400\n\n**Risk summary:** passed demo checks.\nIntent hash: `0x20bcbbe4cbaef0c25180268e016528c764df435155d0652c2df680962db82b07`\n\nReply **`approve`** to execute on Mantle, or **`cancel`** to abort.\n\n> **Disclosure:** Server demo wallet signs this swap (MVP). Explorer link follows execution.\n",
+      "steps": [
+        "mantle_quote",
+        "mantle_quote"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "pending": true,
+        "intentHash": "0x20bcbbe4cbaef0c25180268e016528c764df435155d0652c2df680962db82b07"
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "B4",
+      "status": "PASS",
+      "message": "show my Mantle wallet balance",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle Balance** (chain 5003)\nWallet: `0x97dD280082DCda17A618D090464798bF824B9678`\n- MNT: 999.659755995149051277\n- WMNT: 0\n- USDC: 0",
+      "steps": [
+        "mantle_balance",
+        "mantle_balance"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "address": "0x97dD280082DCda17A618D090464798bF824B9678",
+        "tokens": [
+          {
+            "symbol": "WMNT",
+            "address": "0x19f5557E23e9914A18239990f6C70D68FDF0deD5",
+            "balance": "0",
+            "decimals": 18
+          },
+          {
+            "symbol": "USDC",
+            "address": "0xAcab8129E2cE587fD203FD770ec9ECAFA2C88080",
+            "balance": "0",
+            "decimals": 6
+          }
+        ]
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "B5",
+      "status": "PASS",
+      "message": "what are my holdings on Mantle?",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle Balance** (chain 5003)\nWallet: `0x97dD280082DCda17A618D090464798bF824B9678`\n- MNT: 999.659755995149051277\n- WMNT: 0\n- USDC: 0",
+      "steps": [
+        "mantle_balance",
+        "mantle_balance"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "address": "0x97dD280082DCda17A618D090464798bF824B9678",
+        "tokens": [
+          {
+            "symbol": "WMNT",
+            "address": "0x19f5557E23e9914A18239990f6C70D68FDF0deD5",
+            "balance": "0",
+            "decimals": 18
+          },
+          {
+            "symbol": "USDC",
+            "address": "0xAcab8129E2cE587fD203FD770ec9ECAFA2C88080",
+            "balance": "0",
+            "decimals": 6
+          }
+        ]
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "B6",
+      "status": "PASS",
+      "message": "swap 10 USDC to WMNT on Mantle please",
+      "note": null,
+      "error": null,
+      "excerpt": "Quote failed: Request failed with status code 400\n\n**Risk summary:** passed demo checks.\nIntent hash: `0xe4e72087ea3194c6f44f3f29c3eea408e74790cde02b09a35abaf3d4365aed89`\n\nReply **`approve`** to execute on Mantle, or **`cancel`** to abort.\n\n> **Disclosure:** Server demo wallet signs this swap (MVP). Explorer link follows execution.\n",
+      "steps": [
+        "mantle_quote",
+        "mantle_quote"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "pending": true,
+        "intentHash": "0xe4e72087ea3194c6f44f3f29c3eea408e74790cde02b09a35abaf3d4365aed89"
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "B7",
+      "status": "PASS",
+      "message": "buy BTC on Binance",
+      "note": null,
+      "error": null,
+      "excerpt": "\n\nTo run trading or exchange-related queries, you need to enable trading for your account.\n\nPlease enable trading in **Settings → Exchanges** and then try again.\n\n\n\nTo run trading or exchange-related queries, you need to enable trading for your account.\n\nPlease enable trading in **Settings → Exchanges** and then try again.\n",
+      "steps": [],
+      "metadata": {
+        "responseFormat": "markdown",
+        "isMarkdownFormatted": true,
+        "success": false,
+        "classification": "CEX_WORKFLOW_MESSAGE",
+        "showModal": true,
+        "modalType": "cex_workflow_error",
+        "phase": "error_trading_disabled"
+      },
+      "mantleWorkflow": false,
+      "timedOut": false
+    },
+    {
+      "id": "C1",
+      "status": "PASS",
+      "message": "swap all my balance YOLO on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap refused** (risk gate)\n\n- Oversized or 'all balance' swaps are blocked in the demo risk gate.\n\n> Demo caps apply. CEX paper mode remains available for strategy rehearsal.",
+      "steps": [
+        "mantle_risk"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "risk": {
+          "verdict": "refuse",
+          "rulesFired": [
+            "yolo_size"
+          ],
+          "explanations": [
+            "Oversized or 'all balance' swaps are blocked in the demo risk gate."
+          ],
+          "riskScore": 60
+        }
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "C2",
+      "status": "PASS",
+      "message": "swap everything to WMNT on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap refused** (risk gate)\n\n- Oversized or 'all balance' swaps are blocked in the demo risk gate.\n\n> Demo caps apply. CEX paper mode remains available for strategy rehearsal.",
+      "steps": [
+        "mantle_risk"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "risk": {
+          "verdict": "refuse",
+          "rulesFired": [
+            "yolo_size"
+          ],
+          "explanations": [
+            "Oversized or 'all balance' swaps are blocked in the demo risk gate."
+          ],
+          "riskScore": 60
+        }
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "C3",
+      "status": "PASS",
+      "message": "swap 1000 USDC to WMNT on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap refused** (risk gate)\n\n- Trade size ~$1000.00 exceeds demo cap of $25.\n\n> Demo caps apply. CEX paper mode remains available for strategy rehearsal.",
+      "steps": [
+        "mantle_risk"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "risk": {
+          "verdict": "refuse",
+          "rulesFired": [
+            "max_trade_usd"
+          ],
+          "explanations": [
+            "Trade size ~$1000.00 exceeds demo cap of $25."
+          ],
+          "riskScore": 40
+        }
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "C4",
+      "status": "PASS",
+      "message": "swap 5 FAKECOIN to WMNT on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap refused** (risk gate)\n\n- Token **FAKECOIN** is not on the Mantle demo allowlist.\n\n> Demo caps apply. CEX paper mode remains available for strategy rehearsal.",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "risk": {
+          "verdict": "refuse",
+          "rulesFired": [
+            "token_allowlist"
+          ],
+          "explanations": [
+            "Token FAKECOIN is not on the Mantle demo allowlist."
+          ]
+        }
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "C5",
+      "status": "PASS",
+      "message": "approve",
+      "note": null,
+      "error": null,
+      "excerpt": "No pending Mantle swap to approve. Request a quote first (e.g. `swap 5 USDC to WMNT on Mantle`).",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "noPending": true
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "E1",
+      "status": "PASS",
+      "message": "cancel",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap cancelled** — no transaction was submitted.",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "cancelled": true
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "E4",
+      "status": "PASS",
+      "message": "approve",
+      "note": null,
+      "error": null,
+      "excerpt": "No pending Mantle swap to approve. Request a quote first (e.g. `swap 5 USDC to WMNT on Mantle`).",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "noPending": true
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "F1",
+      "status": "PASS",
+      "message": "approve",
+      "note": null,
+      "error": null,
+      "excerpt": "No pending Mantle swap to approve. Request a quote first (e.g. `swap 5 USDC to WMNT on Mantle`).",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "noPending": true
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "F3",
+      "status": "PASS",
+      "message": "approve",
+      "note": null,
+      "error": null,
+      "excerpt": "No pending Mantle swap to approve. Request a quote first (e.g. `swap 5 USDC to WMNT on Mantle`).",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "noPending": true
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "F4a",
+      "status": "BLOCKED",
+      "message": "APPROVE",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap failed:** Request failed with status code 400",
+      "steps": [
+        "mantle_execute",
+        "mantle_execute"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "error": "Request failed with status code 400"
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "F4b",
+      "status": "PASS",
+      "message": "Cancel",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap cancelled** — no transaction was submitted.",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "cancelled": true
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "G3",
+      "status": "PASS",
+      "message": "analyze ETH sentiment and swap 5 USDC to WMNT on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "Quote failed: Request failed with status code 400\n\n**Risk summary:** passed demo checks.\nIntent hash: `0xe18851d651f0277b96ce0dbab0cb9fb749a784785cd7f406bf2a79c5323edc53`\n\nReply **`approve`** to execute on Mantle, or **`cancel`** to abort.\n\n> **Disclosure:** Server demo wallet signs this swap (MVP). Explorer link follows execution.\n\n\n> **Analysis:** For richer context, run sentiment/TA in a prior ",
+      "steps": [
+        "mantle_quote",
+        "mantle_quote"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "pending": true,
+        "intentHash": "0xe18851d651f0277b96ce0dbab0cb9fb749a784785cd7f406bf2a79c5323edc53"
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "H1",
+      "status": "PASS",
+      "message": "show my Mantle wallet balance",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle Balance** (chain 5003)\nWallet: `0x97dD280082DCda17A618D090464798bF824B9678`\n- MNT: 999.659755995149051277\n- WMNT: 0\n- USDC: 0",
+      "steps": [
+        "mantle_balance",
+        "mantle_balance"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "address": "0x97dD280082DCda17A618D090464798bF824B9678",
+        "tokens": [
+          {
+            "symbol": "WMNT",
+            "address": "0x19f5557E23e9914A18239990f6C70D68FDF0deD5",
+            "balance": "0",
+            "decimals": 18
+          },
+          {
+            "symbol": "USDC",
+            "address": "0xAcab8129E2cE587fD203FD770ec9ECAFA2C88080",
+            "balance": "0",
+            "decimals": 6
+          }
+        ]
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "H3",
+      "status": "PASS",
+      "message": "swap 5 USDC to WMNT on Mantle",
+      "note": "Sepolia 5003: 0x quote may fail — pass if approval prompt still shown",
+      "error": null,
+      "excerpt": "Quote failed: Request failed with status code 400\n\n**Risk summary:** passed demo checks.\nIntent hash: `0xe18851d651f0277b96ce0dbab0cb9fb749a784785cd7f406bf2a79c5323edc53`\n\nReply **`approve`** to execute on Mantle, or **`cancel`** to abort.\n\n> **Disclosure:** Server demo wallet signs this swap (MVP). Explorer link follows execution.\n",
+      "steps": [
+        "mantle_quote",
+        "mantle_quote"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "pending": true,
+        "intentHash": "0xe18851d651f0277b96ce0dbab0cb9fb749a784785cd7f406bf2a79c5323edc53"
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "J1",
+      "status": "PASS",
+      "message": "swap all my balance YOLO on Mantle",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap refused** (risk gate)\n\n- Oversized or 'all balance' swaps are blocked in the demo risk gate.\n\n> Demo caps apply. CEX paper mode remains available for strategy rehearsal.",
+      "steps": [
+        "mantle_risk"
+      ],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "risk": {
+          "verdict": "refuse",
+          "rulesFired": [
+            "yolo_size"
+          ],
+          "explanations": [
+            "Oversized or 'all balance' swaps are blocked in the demo risk gate."
+          ],
+          "riskScore": 60
+        }
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "J2",
+      "status": "PASS",
+      "message": "cancel",
+      "note": null,
+      "error": null,
+      "excerpt": "**Mantle swap cancelled** — no transaction was submitted.",
+      "steps": [],
+      "metadata": {
+        "classification": "MANTLE_WORKFLOW_MESSAGE",
+        "chainId": 5003,
+        "cancelled": true
+      },
+      "mantleWorkflow": true,
+      "timedOut": false
+    },
+    {
+      "id": "L4",
+      "status": "PASS",
+      "message": "(burst)",
+      "note": null,
+      "error": null,
+      "excerpt": "",
+      "steps": [],
+      "metadata": null,
+      "mantleWorkflow": false,
+      "timedOut": false
+    },
+    {
+      "id": "M1",
+      "status": "PASS",
+      "error": null,
+      "excerpt": "# Mantle Gate Check — 2026-06-13T14:32:21.742Z\n\n| Gate | HTTP | Pass | Note |\n|------|------|------|------|\n| A — 0x Mantle Sepolia (5003) | 400 | no | {\"name\":\"INPUT_INVALID\",\"message\":\"The input is "
+    },
+    {
+      "id": "M2",
+      "status": "BLOCKED",
+      "error": null,
+      "excerpt": "Chain 5003 | wallet 0x97dD280082DCda17A618D090464798bF824B9678\nMNT balance: 999.659755995149051277\nError: 0x quote 400: {\"name\":\"INPUT_INVALID\",\"message\":\"The input is invalid\",\"data\":{\"zid\":\"0xaf2a42"
+    },
+    {
+      "id": "M3",
+      "status": "PASS",
+      "error": null,
+      "excerpt": "\n> @elizaos-plugins/plugin-mantle-dex@0.0.1 test:unit /home/leon26/projects/sentiedge-projects/auto-trading-agent-for-cryptos/packages/plugin-mantle-dex\n> vitest run __tests__/*.test.ts\n\n\n RUN  v3.0.5"
+    },
+    {
+      "id": "M4",
+      "status": "PASS",
+      "error": null,
+      "excerpt": "\n> @elizaos/core@0.25.9 test /home/leon26/projects/sentiedge-projects/auto-trading-agent-for-cryptos/packages/core\n> vitest run --run mantlePrecheck mantleWorkflowHandler\n\n\n RUN  v3.0.5 /home/leon26/p"
+    }
+  ],
+  "summary": {
+    "pass": 26,
+    "fail": 0,
+    "blocked": 2,
+    "total": 28
+  }
+}

@@ -1084,7 +1084,7 @@ export function ShareDialog({ open, onOpenChange, context }: ShareDialogProps) {
         measureShell.style.cssText = `position:fixed;left:-99999px;top:0;width:${width}px;visibility:hidden;pointer-events:none;`;
         measureShell.appendChild(clone);
         document.body.appendChild(measureShell);
-        let exportHeight = Math.max(
+        const exportHeight = Math.max(
             1,
             Math.round(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height))
         );

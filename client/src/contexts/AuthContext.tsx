@@ -42,6 +42,10 @@ interface AuthProviderProps {
 const SUBSCRIPTION_TIERS = ['free', 'plus', 'pro', 'enterprise'] as const;
 
 const getDevTestEmail = (): string | null => {
+  const publicAccess = import.meta.env.VITE_PUBLIC_ACCESS_MODE === '1';
+  if (publicAccess) {
+    return 'guest@public.local';
+  }
   if (!import.meta.env.DEV) {
     return null;
   }
@@ -202,6 +206,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const checkAuthStatus = async () => {
+    if (import.meta.env.VITE_PUBLIC_ACCESS_MODE === '1') {
+      await finalizeLogin({
+        id: 'public-guest',
+        email: 'guest@public.local',
+        first_name: 'Guest',
+        last_name: 'User',
+        resolvedTier: getDevTestTier(),
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const hadAuthState = isAuthenticated || !!user;
     const userInfoCookie = getCookie(USER_INFO_COOKIE_KEY);
 

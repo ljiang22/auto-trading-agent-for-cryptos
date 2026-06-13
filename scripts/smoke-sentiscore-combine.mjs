@@ -30,7 +30,7 @@ const csvtojson = require('csvtojson');
 const args = process.argv.slice(2);
 const getArg = (flag) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : null; };
 const SYMBOL   = (getArg('--symbol') || 'BTC').toUpperCase();
-const DAYS     = parseInt(getArg('--days') || '14', 10);
+const DAYS     = Number.parseInt(getArg('--days') || '14', 10);
 const NO_PNG   = args.includes('--no-png');
 
 // ── Config ───────────────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ function normalizeRow(row) {
     let value;
     const ep = low.expected_positive;
     if (ep !== undefined && ep !== '') {
-        const parsed = parseFloat(ep);
+        const parsed = Number.parseFloat(ep);
         value = Number.isFinite(parsed) ? parsed
             : (-sn + (-2/3)*mn + (-1/3)*ldn + (1/3)*ldp + (2/3)*mp + sp) / total;
     } else {

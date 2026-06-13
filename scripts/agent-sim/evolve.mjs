@@ -69,9 +69,9 @@ async function proposeForTarget({ target, seed, digest, traceDigest, n, propose 
 /** Pick the hill-climb seed from a round's kept candidates: best quality, then lowest latency. */
 function pickRoundBest(kept) {
     return [...kept].sort((a, b) => {
-        const t = (b.metrics?.taskScore ?? -Infinity) - (a.metrics?.taskScore ?? -Infinity);
+        const t = (b.metrics?.taskScore ?? Number.NEGATIVE_INFINITY) - (a.metrics?.taskScore ?? Number.NEGATIVE_INFINITY);
         if (t !== 0) return t;
-        return (a.metrics?.p95LatencyMs ?? Infinity) - (b.metrics?.p95LatencyMs ?? Infinity);
+        return (a.metrics?.p95LatencyMs ?? Number.POSITIVE_INFINITY) - (b.metrics?.p95LatencyMs ?? Number.POSITIVE_INFINITY);
     })[0];
 }
 
@@ -192,7 +192,7 @@ export async function evolve(opts) {
     const baselineVector = baselineVectorOverride ?? scoreVector({ simResults: baseline.simResults, scenarios, traceSignals: baseline.traceSignals, classificationOk });
     const traceDigest = traceSignalDigest(baseline.traceSignals);
     const failDigest = mineFailures(baseline.simResults).digest;
-    let digest = critiqueOverride ?? (traceDigest ? `${failDigest}\n${traceDigest}` : failDigest);
+    const digest = critiqueOverride ?? (traceDigest ? `${failDigest}\n${traceDigest}` : failDigest);
 
     log(`baseline: ${Object.entries(baselineVector).map(([k, v]) => `${k}=${typeof v === "number" ? fmtNum(v) : v}`).join(" ")}`);
     if (!baselineVectorOverride && !(baseline.simResults?.length)) {

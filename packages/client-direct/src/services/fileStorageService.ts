@@ -2,7 +2,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, ListOb
 import { mkdirSync, existsSync, writeFileSync } from "fs";
 import path from "path";
 import { elizaLogger } from "@elizaos/core";
-import { Readable } from "stream";
+import type { Readable } from "stream";
 
 export interface SaveFileOptions {
     content: Buffer | string;

@@ -1,6 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as cw from "aws-cdk-lib/aws-cloudwatch";
-import { Construct } from "constructs";
+import type { Construct } from "constructs";
 
 export interface TradingDashboardStackProps extends cdk.StackProps {
     readonly metricNamespace: string;

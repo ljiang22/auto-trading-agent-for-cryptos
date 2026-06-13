@@ -1892,6 +1892,7 @@ export type TemplateType = string | ((options: { state: State }) => string);
 export enum PluginType {
     Default = "default",
     Trading = "trading",
+    Mantle = "mantle",
 }
 
 /**
@@ -4083,7 +4084,8 @@ export type MessageClassificationType =
     | "REGULAR_MESSAGE" 
     | "TASK_CHAIN_MESSAGE" 
     | "COMPREHENSIVE_ANALYSIS_MESSAGE"
-    | "CEX_WORKFLOW_MESSAGE";
+    | "CEX_WORKFLOW_MESSAGE"
+    | "MANTLE_WORKFLOW_MESSAGE";
 
 /**
  * Result of message classification

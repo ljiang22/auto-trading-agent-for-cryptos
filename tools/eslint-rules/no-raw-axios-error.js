@@ -1,25 +1,4 @@
-/**
- * §8.5 — no-raw-axios-error
- *
- * Forbids logging raw axios `err` objects or naked `err.message` inside the
- * venue adapters. Use `formatAxiosErrorLine(err)` / `summarizeAxiosError(err)`
- * from `@elizaos/core` instead. Without this, a single CoinMetrics 403 once
- * dumped ~6,500 lines of TLS socket internals into CloudWatch in 27 s.
- *
- * Triggers on:
- *   - `elizaLogger.{debug,info,warn,error}(...)` where one of the args is a
- *     template literal containing `${err}` / `${err.message}` / a ternary like
- *     `err instanceof Error ? err.message : String(err)`.
- *
- * Allowed if:
- *   - The error is wrapped: `formatAxiosErrorLine(err)` / `summarizeAxiosError(err)`.
- *
- * Scope: `packages/plugin-cex/src/exchanges/services/**`. Other packages have
- * their own logging conventions (e.g. on-chain-data uses summarizeAxiosError
- * already; comprehensive-analysis logs use the workflow's `[Memory]` probes).
- */
 
-"use strict";
 
 const FORBIDDEN_PATTERNS = [
     // "${err.message}", "${err.toString()}", "${e.message}"

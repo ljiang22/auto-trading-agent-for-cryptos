@@ -1119,14 +1119,14 @@ export {
     isExchangeId,
     getSupportedExchangeNames,
 } from "./exchanges/registry";
-export {
-    type CoinbaseUserDataStreamConfig,
-    type LedgerOperations,
-    type PendingOrderLedgerRow,
-    type PendingOrderState,
-    type PendingOrderStateTransition,
-    type ReconciliationEvent,
-    type VenueUserDataStreamConfig,
+export type {
+    CoinbaseUserDataStreamConfig,
+    LedgerOperations,
+    PendingOrderLedgerRow,
+    PendingOrderState,
+    PendingOrderStateTransition,
+    ReconciliationEvent,
+    VenueUserDataStreamConfig,
 } from "./reconciliation/types";
 export {
     acquireTradingLock,
