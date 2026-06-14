@@ -97,6 +97,21 @@ export const compileStrategyAction: Action = {
                 },
             });
         }
+
+        // Persist the compiled DSL so arm_strategy ("arm it") can recover it.
+        try {
+            const { buildCompiledStrategyMemory } = await import("../strategy/engine/compiledStrategyMemory");
+            const mem = buildCompiledStrategyMemory({
+                agentId: runtime.agentId,
+                roomId: memory.roomId,
+                userId: memory.userId,
+                strategy: result.strategy,
+            });
+            await runtime.messageManager.createMemory(mem, "messages");
+        } catch (e) {
+            elizaLogger.warn(`[plugin-cex] compile_strategy persist failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
         return { success: true, strategy: result.strategy };
     },
 };

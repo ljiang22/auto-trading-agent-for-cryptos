@@ -869,6 +869,14 @@ export function validateApprovedActionParams(actionName: string, params: Record<
         case "add_allowed_asset":
         case "remove_allowed_asset":
             return;
+        // StrategyEngineService control surface: lifecycle actions validate
+        // their own params downstream (recover/compile DSL, instance_id lookup).
+        case "arm_strategy":
+        case "pause_strategy":
+        case "resume_strategy":
+        case "stop_strategy":
+        case "list_strategies":
+            return;
         default:
             throw new Error(`Unknown CEX action: ${actionName}`);
     }

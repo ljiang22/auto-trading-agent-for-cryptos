@@ -23,6 +23,8 @@ const READ_ONLY_ACTIONS = new Set<string>([
     // Fix 15 — instant ticker + order-book lookup (public Binance endpoints).
     "get_ticker",
     "get_orderbook",
+    // StrategyEngineService — read-only status view.
+    "list_strategies",
 ]);
 
 const WRITE_ACTIONS = new Set<string>([
@@ -36,6 +38,12 @@ const WRITE_ACTIONS = new Set<string>([
     "remove_blocked_asset",
     "add_allowed_asset",
     "remove_allowed_asset",
+    // StrategyEngineService — arming/lifecycle are writes so arm_strategy
+    // routes through the human-input approval modal (the single arm gate).
+    "arm_strategy",
+    "pause_strategy",
+    "resume_strategy",
+    "stop_strategy",
 ]);
 
 /**
