@@ -43,6 +43,7 @@ import {
     type ExchangeId,
     isComprehensiveAnalysisInProgress,
     getPendingApprovalForRoom,
+    applyPlanStepEdit,
     revokePendingApprovalsForUser,
     emitEventToUser,
     buildMarketSnapshot,
@@ -740,6 +741,22 @@ const authMiddleware = async (
 /** Cookie/session auth then 401 unless authenticated — safe to mount on `DirectClient` routes outside `createApiRouter`. */
 export const requireAuth: RequestHandler = (req, res, next) => {
     authMiddleware(req, res, () => checkAuthenticated(req, res, next));
+};
+
+/**
+ * Public-demo-aware auth selector for shared/system resources (daily reports,
+ * report charts). On an isolated public side-environment (`PUBLIC_ACCESS_MODE=1`)
+ * anonymous visitors may read these, so we attach user context without blocking;
+ * on production AWS (flag unset) this is identical to `requireAuth` — anonymous
+ * requests get 401. Evaluated per-request so the flag is honored regardless of
+ * router build order. Mirrors the s3-files proxy's public-access allowance
+ * (`DirectClient` `s3FilesHandler`) and the task-chain approval route.
+ */
+export const publicOrRequireAuth: RequestHandler = (req, res, next) => {
+    if (isPublicAccessModeActive()) {
+        return authMiddleware(req, res, next);
+    }
+    return requireAuth(req, res, next);
 };
 
 const ADMIN_EMAILS = (getEnvVariable("ADMIN_EMAILS") || getEnvVariable("ADMIN_EMAIL") || "")
@@ -5109,6 +5126,52 @@ export function createApiRouter(
      * Public Binance/Coinbase endpoints don't need user credentials,
      * but auth-gating prevents the route from being a DDoS amplifier.
      */
+    /**
+     * #6d — Persist a user's in-modal order edits to a pending plan step
+     * BEFORE they approve it, so the order that executes (and the result /
+     * plan card) reflects exactly what they reviewed. The plan runner's
+     * approval continuation ("yes") then runs the EDITED step. Ownership is
+     * enforced inside `applyPlanStepEdit` (plan.user_id must match the
+     * resolved requester). Non-fatal by design: the client proceeds with
+     * the un-edited step if this fails.
+     */
+    router.post("/agents/:agentId/cex/plan/edit-step", authMiddleware, (req, res) => {
+        const { agentId } = validateUUIDParams(req.params, res) ?? { agentId: null };
+        if (!agentId) return;
+        const userId = (req as any).userId ?? getUserId(req);
+        if (!userId) return res.status(401).json({ error: "Authentication required" });
+        const body = (req.body ?? {}) as {
+            planId?: unknown;
+            stepIndex?: unknown;
+            parameters?: unknown;
+        };
+        const planId = typeof body.planId === "string" ? body.planId : "";
+        const stepIndex =
+            typeof body.stepIndex === "number"
+                ? body.stepIndex
+                : Number.parseInt(String(body.stepIndex), 10);
+        const parameters =
+            body.parameters && typeof body.parameters === "object"
+                ? (body.parameters as Record<string, unknown>)
+                : null;
+        if (!planId || !Number.isInteger(stepIndex) || stepIndex < 0 || !parameters) {
+            return res
+                .status(400)
+                .json({ error: "planId, stepIndex (>=0), and parameters are required" });
+        }
+        const result = applyPlanStepEdit({
+            planId,
+            ownerUserId: String(userId),
+            stepIndex,
+            params: parameters,
+        });
+        if (!result.ok) {
+            const code = result.reason === "forbidden" ? 403 : 409;
+            return res.status(code).json({ ok: false, reason: result.reason });
+        }
+        return res.json({ ok: true, applied: result.applied ?? [] });
+    });
+
     router.get("/agents/:agentId/cex/market-snapshot", authMiddleware, async (req, res) => {
         const { agentId } = validateUUIDParams(req.params, res) ?? { agentId: null };
         if (!agentId) return;
@@ -8197,7 +8260,7 @@ ${feedback}
 
     // ── Daily Analysis Endpoints ──────────────────────────────────
 
-    router.get("/daily-analysis", requireAuth, (req, res) => {
+    router.get("/daily-analysis", publicOrRequireAuth, (req, res) => {
         try {
             const scheduler = directClient.getDailyAnalysisScheduler();
             const fileName =

@@ -750,6 +750,44 @@ async function fetchUserOpenOrdersFromCore(
     input: CEXUserOpenOrdersInput,
 ): Promise<CEXUserOpenOrder[] | null> {
     try {
+        // Paper-mode users' OPEN orders live in the paper ledger, not the
+        // live exchange. Querying the real venue with the user's (often
+        // dummy) paper creds fails and forces callers to fall back to a
+        // memory snapshot that can't distinguish a filled leg from an open
+        // one — so "cancel all" wrongly includes already-filled orders (they
+        // then surface as "Not Found"). Read the paper ledger's OPEN orders
+        // directly. `getUserTradingMode` resolves the public-demo paper
+        // default, so anonymous PUBLIC_ACCESS users hit this branch too.
+        const mode = await getUserTradingMode(input.runtime, input.userId).catch(
+            () => "live",
+        );
+        if (mode === "paper") {
+            const realVenue = (input.venue || "binance").toLowerCase();
+            const paperVenue = await createPaperVenueForRuntime(
+                input.runtime,
+                realVenue,
+            );
+            const rawPaper = (await paperVenue.orders.getOrders({
+                userId: input.userId,
+                order_status: ["open"],
+            } as never)) as { orders?: Array<Record<string, unknown>> } | undefined;
+            const paperRows = Array.isArray(rawPaper?.orders) ? rawPaper.orders : [];
+            const paperOut: CEXUserOpenOrder[] = [];
+            for (const row of paperRows) {
+                const orderIdRaw =
+                    row.order_id ?? row.orderId ?? row.id ?? row.client_order_id;
+                const symbolRaw = row.product_id ?? row.symbol;
+                if (orderIdRaw == null || symbolRaw == null) continue;
+                const orderId = String(orderIdRaw).trim();
+                const symbol = normalizeVenueSymbol(String(symbolRaw).trim());
+                if (orderId && symbol) paperOut.push({ order_id: orderId, symbol });
+            }
+            elizaLogger.info(
+                `[plugin-cex] fetchUserOpenOrders venue=paper(${realVenue}) count=${paperOut.length}`,
+            );
+            return paperOut;
+        }
+
         const preferExchangeId = input.venue
             ? (input.venue.toLowerCase() as never)
             : undefined;

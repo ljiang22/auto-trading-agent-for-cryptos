@@ -70,6 +70,38 @@ export const TASK_CHAIN_APPROVAL_CANCELLED_BY_DISCONNECT =
 
 const USER_FACING_TASK_FAILURE_MESSAGE = "This task encountered an internal error and could not complete.";
 const USER_FACING_WORKFLOW_FAILURE_MESSAGE = "The task chain encountered an internal error. Please try again.";
+
+/**
+ * Trim long chat text WITHOUT cutting mid-sentence. Returns the text
+ * unchanged when within `cap`; otherwise backs up from `cap` to the last
+ * sentence terminator (`. ! ? 。 ！ ？`), else the last line break, else the
+ * last space, and appends `marker`. A digest therefore always ends on a
+ * complete thought instead of mid-word ("…trend reversal or cons…"). Caps
+ * are kept generous so concise task answers render in full — only genuine
+ * walls of raw output get trimmed, and even then on a clean boundary.
+ */
+function clampToSentenceBoundary(text: string, cap: number, marker: string): string {
+    if (!text) return text;
+    const trimmed = text.trimEnd();
+    if (trimmed.length <= cap) return trimmed;
+    const window = trimmed.slice(0, cap);
+    let cut = -1;
+    const re = /[.!?。！？]["')\]]?(?=\s|$)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(window)) !== null) {
+        cut = m.index + m[0].length;
+    }
+    if (cut < cap * 0.4) {
+        const nl = window.lastIndexOf("\n");
+        if (nl >= cap * 0.4) {
+            cut = nl;
+        } else {
+            const sp = window.lastIndexOf(" ");
+            cut = sp > 0 ? sp : cap;
+        }
+    }
+    return `${window.slice(0, cut).trimEnd()}\n\n${marker}`;
+}
 const USER_FACING_GENERIC_ERROR_LABEL = "Internal error";
 const FAVORITE_CHAIN_KEYS = [
     "favoriteTaskChain",
@@ -1617,7 +1649,15 @@ async function createTaskMemory(task: TaskNode, context: TaskExecutionContext): 
             return `## ❌ ${actionName} Failed\n\n${USER_FACING_TASK_FAILURE_MESSAGE}`;
         };
 
-        const actionText = isSuccess ? buildSuccessText() : buildFailureText();
+        const rawActionText = isSuccess ? buildSuccessText() : buildFailureText();
+        // Show the FULL per-task result in chat — no character cap. Per the
+        // user: conciseness is handled at GENERATION time via the action /
+        // synthesis prompts (see the "be concise" directives there), not by
+        // truncating here into a "full detail in the task panel" digest.
+        // Users want complete results (including data tables) visible inline.
+        // The full result also remains on metadata (originalResultData /
+        // actionData) for the task-panel view.
+        const actionText = rawActionText;
         const sanitizedActionData = sanitizeStructuredData((resultData as any)?.actionData);
         const cleanedResultData = cleanTaskResultData(resultData);
         const extractActionDataFromResults = (data: any): Record<string, unknown> | undefined => {
@@ -1652,6 +1692,10 @@ async function createTaskMemory(task: TaskNode, context: TaskExecutionContext): 
                 metadata: {
                     actionName: actionName,
                     isActionResponse: true,
+                    // Routing observability: per-task memories are the ONLY response events a
+                    // task-chain turn puts on the SSE wire (verified via raw event dump) — SSE
+                    // consumers read the turn's classification here, parity with other routes.
+                    classification: 'TASK_CHAIN_MESSAGE',
                     taskId: task.id,
                     taskName: task.name,
                     success: isSuccess,
@@ -2947,14 +2991,42 @@ async function createWorkflowSummaryMemory(
         finishedAt: chain.metadata?.endTime ?? Date.now()
     });
 
-    const summaryText = language === "zh-CN"
+    const statusLine = language === "zh-CN"
         ? `🎯 **任务链已完成** — ${chain.name ?? "任务链"} (${completed.length}/${tasks.length} 个任务完成)`
         : `🎯 **Taskchain accomplished** — ${chain.name ?? "Task Chain"} (${completed.length}/${tasks.length} tasks completed)`;
 
-    // The summary text above is already a one-line status; treat it as the
-    // canonical Key Findings for context-replay purposes. Falls back to the
-    // generic extractor if a longer narrative is ever appended in the future.
-    const summaryOverride = `- ${summaryText.replace(/\*\*/g, "").trim()}`;
+    // ANSWER-FIRST: the user's persisted answer must BE the chain's synthesis, not a status
+    // one-liner (the per-step eval caught step1 answering "is now a good time?" with only
+    // "Taskchain accomplished (5/5)" — the synthesis was buried in the task panels). Lead with the
+    // LAST completed task's textual output (the synthesis task in a dependency-ordered chain),
+    // trimmed to keep the response concise; the status line follows.
+    const extractTaskText = (data: unknown): string => {
+        if (typeof data === "string") return data;
+        if (data && typeof data === "object") {
+            const d = data as Record<string, unknown>;
+            for (const k of ["text", "response", "summary", "analysis", "result"]) {
+                if (typeof d[k] === "string" && (d[k] as string).trim().length > 0) return d[k] as string;
+            }
+        }
+        return "";
+    };
+    let synthesisText = "";
+    for (let i = tasks.length - 1; i >= 0; i -= 1) {
+        const t = tasks[i];
+        if (t.status === "completed") {
+            synthesisText = extractTaskText(t.result?.data).trim();
+            if (synthesisText) break;
+        }
+    }
+    synthesisText = clampToSentenceBoundary(
+        synthesisText,
+        3800,
+        "_(trimmed — ask for any section in detail)_",
+    );
+    const summaryText = synthesisText ? `${synthesisText}\n\n${statusLine}` : statusLine;
+
+    // One-line status stays the canonical Key Findings for context-replay purposes.
+    const summaryOverride = `- ${statusLine.replace(/\*\*/g, "").trim()}`;
 
     let summaryMemoryId = existingPlanningMemory?.id ?? (uuidv4() as UUID);
     const summaryCreatedAt = existingPlanningMemory?.createdAt ?? Date.now();
@@ -2971,6 +3043,9 @@ async function createWorkflowSummaryMemory(
             metadata: {
                 actionName: 'Task Chain Summary',
                 isActionResponse: true,
+                // Routing observability: SSE consumers (eval harness, dashboards) read the turn's
+                // classification off response metadata — parity with the regular/CEX paths.
+                classification: 'TASK_CHAIN_MESSAGE',
                 chainId: chain.id,
                 chainName: chain.name,
                 stats: result.stats,

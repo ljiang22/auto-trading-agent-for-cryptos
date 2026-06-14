@@ -187,3 +187,55 @@ describe("parseContinuation — disambiguation", () => {
         expect(parseContinuation("no").command).toBe("CANCEL_PLAN");
     });
 });
+
+describe("parseContinuation — DELEGATE (defer the decision to the agent)", () => {
+    const expectDelegate = (input: string) => {
+        const result = parseContinuation(input);
+        expect(result.command).toBe("DELEGATE");
+    };
+
+    // The exact production failure: a deferral on a pending parameter
+    // clarification used to map to UNKNOWN → plan cancelled → revert to
+    // re-offering strategies. It must now be DELEGATE (fill defaults +
+    // require a final yes), not UNKNOWN.
+    it("'You can decide it with your best judgement and practice'", () =>
+        expectDelegate("You can decide it with your best judgement and practice"));
+    it("'you decide'", () => expectDelegate("you decide"));
+    it("'you can decide'", () => expectDelegate("you can decide"));
+    it("'use your best judgement'", () => expectDelegate("use your best judgement"));
+    it("'use your best judgment' (US spelling)", () =>
+        expectDelegate("use your best judgment"));
+    it("'whatever you think is best'", () =>
+        expectDelegate("whatever you think is best"));
+    it("'your call'", () => expectDelegate("your call"));
+    it("'your choice'", () => expectDelegate("your choice"));
+    it("'up to you'", () => expectDelegate("up to you"));
+    it("'I trust your judgment'", () => expectDelegate("I trust your judgment"));
+    it("'I'll leave it to you'", () => expectDelegate("I'll leave it to you"));
+    it("'you choose'", () => expectDelegate("you choose"));
+    it("'at your discretion'", () => expectDelegate("at your discretion"));
+    it("'proceed as you see fit'", () => expectDelegate("proceed as you see fit"));
+    // zh-CN
+    it("'你决定'", () => expectDelegate("你决定"));
+    it("'你来决定'", () => expectDelegate("你来决定"));
+    it("'你看着办'", () => expectDelegate("你看着办"));
+
+    // Negative cases — these must KEEP their existing classification and
+    // never be swallowed by DELEGATE.
+    it("'yes' stays APPROVE_NEXT (explicit approval, not a deferral)", () =>
+        expect(parseContinuation("yes").command).toBe("APPROVE_NEXT"));
+    it("'no' stays CANCEL_PLAN", () =>
+        expect(parseContinuation("no").command).toBe("CANCEL_PLAN"));
+    it("a genuine topic-shift question stays UNKNOWN", () =>
+        expect(parseContinuation("what is the BTC price right now?").command).toBe(
+            "UNKNOWN",
+        ));
+    it("a fresh order-creation stays UNKNOWN (not a delegation)", () =>
+        expect(
+            parseContinuation("place 10 USDT buy BTC at 60000").command,
+        ).toBe("UNKNOWN"));
+    it("'cancel, you decide later' — cancel still wins (safety bias)", () =>
+        expect(parseContinuation("cancel, you decide later").command).toBe(
+            "CANCEL_PLAN",
+        ));
+});

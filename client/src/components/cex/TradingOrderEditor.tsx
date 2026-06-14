@@ -1312,6 +1312,27 @@ export const TradingOrderEditor: React.FC<TradingOrderEditorProps> = ({
         patch({ order_configuration: next });
     };
 
+    // #6a — Pre-select "Post Only" for GTC limit orders (the only variant
+    // where Binance honors post_only). A limit order is maker-intent by
+    // definition, so defaulting the toggle ON keeps a staged dip-buy from
+    // silently crossing the spread as a taker. Runs once per editor
+    // instance and only when the incoming config hasn't already set the
+    // flag — after that the user's explicit toggle (including unchecking)
+    // is always respected.
+    const postOnlyDefaultedRef = useRef(false);
+    useEffect(() => {
+        if (postOnlyDefaultedRef.current) return;
+        if (variantKey !== "limit_limit_gtc") return;
+        // First time this editor shows a GTC limit order: default Post Only
+        // ON (once). We mark the ref BEFORE patching so the user's later
+        // toggle — including unchecking — is never re-overridden.
+        postOnlyDefaultedRef.current = true;
+        if (inner.post_only !== true) {
+            patchOrderConfig("post_only", true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [variantKey, inner.post_only]);
+
     /**
      * Pair-aware change handler: replaces `product_id` / `symbol` AND
      * clears every price-bearing field inside `order_configuration`
@@ -1356,7 +1377,18 @@ export const TradingOrderEditor: React.FC<TradingOrderEditorProps> = ({
         if (liveSnapshotKey === wantKey && !snapshotLoading) return;
         let cancelled = false;
         setSnapshotLoading(true);
-        const t = setTimeout(() => {
+        // Bounded retry: a single transient failure (e.g. the agent
+        // momentarily unavailable / restarting, or a flaky network) used to
+        // set liveSnapshot=null with NO retry (deps unchanged), permanently
+        // disabling the size slider until the pair changed — the "slider
+        // dead in all cases, no message" symptom. Retry a few times with
+        // backoff so a one-off error self-heals; only give up (null) after
+        // the last attempt.
+        const MAX_ATTEMPTS = 3;
+        let attempt = 0;
+        let timer: ReturnType<typeof setTimeout>;
+        const run = () => {
+            if (cancelled) return;
             apiClient
                 .getCexAccountSnapshot(agentId, {
                     venue,
@@ -1366,18 +1398,23 @@ export const TradingOrderEditor: React.FC<TradingOrderEditorProps> = ({
                 .then((snap) => {
                     if (cancelled) return;
                     setLiveSnapshot(snap);
+                    setSnapshotLoading(false);
                 })
                 .catch(() => {
                     if (cancelled) return;
-                    setLiveSnapshot(null);
-                })
-                .finally(() => {
-                    if (!cancelled) setSnapshotLoading(false);
+                    attempt += 1;
+                    if (attempt < MAX_ATTEMPTS) {
+                        timer = setTimeout(run, 600 * attempt);
+                    } else {
+                        setLiveSnapshot(null);
+                        setSnapshotLoading(false);
+                    }
                 });
-        }, 250);
+        };
+        timer = setTimeout(run, 250);
         return () => {
             cancelled = true;
-            clearTimeout(t);
+            clearTimeout(timer);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [agentId, venue, split?.base, split?.quote]);

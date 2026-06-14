@@ -99,9 +99,47 @@ const ORDER_ID_PATTERNS: RegExp[] = [
     /\b([0-9]{9,})\b/,
 ];
 
+/**
+ * An order's lifecycle bucket, derived from the status word the agent
+ * rendered next to the id:
+ *   - "terminal": already filled / cancelled / rejected / expired — NOT
+ *     cancellable (a cancel returns "Not Found" at the venue and wrongly
+ *     pads the cancel table — the reported bug).
+ *   - "open": new / open / pending / partially-filled — cancellable.
+ *   - "unknown": no status word found near the id.
+ */
+type OrderLifecycle = "open" | "terminal" | "unknown";
+
+/**
+ * Classify an order row / line by its rendered status word. Order matters:
+ * a "partially filled" order is still cancellable, so it must be checked
+ * BEFORE the generic "filled" terminal match (which contains the word
+ * "filled" and would otherwise swallow it).
+ */
+function classifyStatus(text: string): OrderLifecycle {
+    if (/partial/i.test(text)) return "open"; // partially[_ -]filled → cancellable
+    if (/pending[\s_-]?cancel/i.test(text)) return "terminal";
+    if (
+        /\b(?:filled|cancell?ed|canceled|rejected|expired|done|settled|closed)\b/i.test(
+            text,
+        )
+    ) {
+        return "terminal";
+    }
+    if (
+        /\b(?:new|open|pending|accepted|working|untriggered|live|active|queued|placed|submitted)\b/i.test(
+            text,
+        )
+    ) {
+        return "open";
+    }
+    return "unknown";
+}
+
 interface ExtractedOrder {
     order_id: string;
     symbol?: string;
+    status?: OrderLifecycle;
 }
 
 /**
@@ -120,7 +158,7 @@ function extractOrdersFromMemory(text: string): ExtractedOrder[] {
         for (const rx of ORDER_ID_PATTERNS) {
             const m = rx.exec(line);
             if (m && m[1]) {
-                orders.push({ order_id: m[1] });
+                orders.push({ order_id: m[1], status: classifyStatus(line) });
                 break;
             }
         }
@@ -134,6 +172,7 @@ function extractOrdersFromMemory(text: string): ExtractedOrder[] {
             if (cells.length < 2) continue;
             let foundId: string | undefined;
             let foundSymbol: string | undefined;
+            let foundStatus: OrderLifecycle = "unknown";
             for (const cell of cells) {
                 for (const rx of ORDER_ID_PATTERNS) {
                     const m = rx.exec(cell);
@@ -141,11 +180,28 @@ function extractOrdersFromMemory(text: string): ExtractedOrder[] {
                         foundId = m[1];
                     }
                 }
-                if (!foundSymbol && /^[A-Z]{2,6}([-\/]?[A-Z]{2,6})?$/.test(cell)) {
+                const cellStatus = classifyStatus(cell);
+                if (foundStatus === "unknown" && cellStatus !== "unknown") {
+                    foundStatus = cellStatus;
+                }
+                // A status word ("FILLED" / "NEW") or a side ("BUY" / "SELL")
+                // also matches the ticker shape below — skip those cells so
+                // they aren't captured as the symbol.
+                if (
+                    !foundSymbol &&
+                    cellStatus === "unknown" &&
+                    !/^(?:BUY|SELL)$/i.test(cell) &&
+                    /^[A-Z]{2,6}([-\/]?[A-Z]{2,6})?$/.test(cell)
+                ) {
                     foundSymbol = cell;
                 }
             }
-            if (foundId) orders.push({ order_id: foundId, symbol: foundSymbol });
+            if (foundId)
+                orders.push({
+                    order_id: foundId,
+                    symbol: foundSymbol,
+                    status: foundStatus,
+                });
         }
     }
 
@@ -230,8 +286,20 @@ export function resolveAllOrdersFromContext(
         const all = extractOrdersFromMemory(memo.text);
         const filtered = filterByVenue(all, input.venue ?? null);
         if (filtered.length === 0) continue;
+        // A batch cancel must only target cancellable orders. Drop rows whose
+        // rendered status is terminal (filled / cancelled / rejected /
+        // expired) — cancelling them returns "Not Found" at the venue and
+        // wrongly pads the cancel table. Open + unknown-status rows are kept
+        // (the venue stays the final arbiter). If this memo lists orders but
+        // none are cancellable, skip it and look further back rather than
+        // surfacing an all-terminal list to cancel.
+        const cancellable = filtered.filter((o) => o.status !== "terminal");
+        if (cancellable.length === 0) continue;
         return {
-            orders: filtered,
+            orders: cancellable.map((o) => ({
+                order_id: o.order_id,
+                symbol: o.symbol,
+            })),
             sourceMemoryId: memo.id,
         };
     }

@@ -1124,6 +1124,22 @@ export const apiClient = {
             body: { threadId, approvalId, decision, confirmationLevel, parameters },
         }),
 
+    /**
+     * #6d — Persist the user's in-modal order edits to a pending multi-step
+     * plan step before approving it, so the executed order + result reflect
+     * their changes. Called from the plan-step approval path; failure is
+     * non-fatal (caller still confirms the un-edited step).
+     */
+    editPlanStep: (
+        agentId: string,
+        args: { planId: string; stepIndex: number; parameters: Record<string, unknown> }
+    ): Promise<{ ok: boolean; applied?: string[]; reason?: string }> =>
+        fetcher({
+            url: `/agents/${agentId}/cex/plan/edit-step`,
+            method: "POST",
+            body: args,
+        }),
+
     // §7.1 — fetch the user's trading preferences (mode badge + risk limits source of truth).
     getTradingPreferences: (): Promise<{
         success: boolean;

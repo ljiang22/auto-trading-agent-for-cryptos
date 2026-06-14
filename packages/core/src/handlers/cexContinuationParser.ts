@@ -53,6 +53,7 @@ export type CexContinuationCommand =
     | "CANCEL_PLAN"
     | "SKIP_STEP"
     | "EXECUTION_STATUS"
+    | "DELEGATE"
     | "UNKNOWN";
 
 export interface CexContinuationResult {
@@ -128,6 +129,44 @@ const APPROVE_PATTERNS: RegExp[] = [
     /^\s*(?:please\s+)?(?:do|place|submit|execute|run)\s+(?:it|that|this|the\s+(?:order|step|next))\b[\s.,!?]*$/i,
     // zh-CN
     /^\s*(?:是|是的|确认|可以|好|好的|继续|执行)[\s.,!?]*$/u,
+];
+
+/**
+ * Delegation — the user defers the decision to the agent rather than
+ * giving an explicit yes/no ("you decide", "use your best judgement",
+ * "your call", "up to you", "whatever you think is best"). Distinct
+ * from APPROVE_NEXT (an explicit "yes") and from UNKNOWN (a genuine
+ * topic shift). The runner treats DELEGATE as "fill in sensible
+ * defaults for any missing parameters, re-render the plan, and still
+ * require one explicit confirmation before executing" — so a vague
+ * deferral never silently executes, and never destructively cancels
+ * the multi-step plan (the production-1 failure: "You can decide it
+ * with your best judgement and practice" used to map to UNKNOWN →
+ * plan cancelled → revert to re-offering strategies).
+ *
+ * NOT anchored to the start — the deferral often trails an
+ * acknowledgement ("ok, you decide", "sounds good, your call"). Cancel
+ * is checked BEFORE this bank, so "cancel, you decide later" still
+ * cancels (safety bias). Order-creation shapes are rejected earlier.
+ */
+const DELEGATE_PATTERNS: RegExp[] = [
+    /\byou\s+(?:can|could|should|may|get\s+to|please)?\s*decide\b/i,
+    /\b(?:use\s+)?your\s+(?:best\s+)?judge?ment\b/i,
+    /\bbest\s+judge?ment\b/i,
+    /\byour\s+(?:call|choice|discretion)\b/i,
+    /\bat\s+your\s+discretion\b/i,
+    /\bup\s+to\s+you\b/i,
+    /\bwhatever\s+you\s+(?:think|like|prefer|decide|want|feel)\b/i,
+    /\bas\s+you\s+(?:see\s+fit|think\s+best|wish|prefer)\b/i,
+    /\byou\s+(?:choose|pick)\b/i,
+    /\b(?:i\s+)?trust\s+(?:your|you)\b/i,
+    /\bleave\s+it\s+(?:up\s+)?to\s+you\b/i,
+    /\byou\s+know\s+best\b/i,
+    // zh-CN
+    /(?:由)?你(?:来)?决定/u,
+    /你看着办/u,
+    /你做主/u,
+    /听你的/u,
 ];
 
 /**
@@ -212,6 +251,16 @@ export function parseContinuation(rawText: string): CexContinuationResult {
     for (const re of APPROVE_PATTERNS) {
         if (re.test(text)) {
             return { command: "APPROVE_NEXT", match: text.match(re)?.[0] };
+        }
+    }
+
+    // 6. Delegation — checked AFTER explicit approval so a clean "yes"
+    //    stays APPROVE_NEXT, but a deferral ("you decide" / "use your
+    //    best judgement") is captured here instead of falling to
+    //    UNKNOWN (which would cancel the plan).
+    for (const re of DELEGATE_PATTERNS) {
+        if (re.test(text)) {
+            return { command: "DELEGATE", match: text.match(re)?.[0] };
         }
     }
 

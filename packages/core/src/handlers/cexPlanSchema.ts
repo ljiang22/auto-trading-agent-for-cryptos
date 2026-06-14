@@ -141,6 +141,13 @@ export interface CexPlan {
      * verbatim for forensic value when a plan misbehaves.
      */
     source_message: string;
+    /**
+     * Count of CONSECUTIVE unrecognized continuation replies. A single
+     * off-template reply re-prompts and preserves the plan (non-
+     * destructive); the second consecutive one cancels (genuine topic
+     * shift). Reset to 0 on any recognized command. Undefined ⇒ 0.
+     */
+    clarify_nudges?: number;
 }
 
 // ---------------------------------------------------------------------------

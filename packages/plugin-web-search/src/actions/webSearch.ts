@@ -353,19 +353,21 @@ export const webSearch: Action = {
         // ~line 1928 — plus message-history fanout) that was never released
         // for the rest of the workflow. Drop the call entirely; the search
         // takes its query from `options.query`, never from composed state.
-        const cleanedQuery = cleanMessageTextForSearch(options?.query || "").replace(/^\w+:\s*/i, "");
+        let cleanedQuery = cleanMessageTextForSearch(options?.query || "").replace(/^\w+:\s*/i, "");
         const resolvedTopic: SearchTopic = isSearchTopic(options?.topic) ? options.topic : "general";
 
         if (!cleanedQuery || cleanedQuery.length < 2) {
-            await callback(
-                createActionErrorResponse({
-                    actionName: "WEB_SEARCH",
-                    type: "web_search_error",
-                    error: new Error("WEB_SEARCH requires a valid query parameter"),
-                    text: "WEB_SEARCH requires a valid query parameter from the workflow.",
-                })
+            // Resilient fallback: a workflow step that didn't thread `query`
+            // should still search using the task/message text (then a generic
+            // default) rather than hard-fail the whole task.
+            const fromMessage = cleanMessageTextForSearch(message?.content?.text || "").replace(/^\w+:\s*/i, "");
+            cleanedQuery =
+                fromMessage && fromMessage.length >= 2
+                    ? fromMessage
+                    : "latest cryptocurrency market news and analysis";
+            elizaLogger.warn(
+                `[WEB_SEARCH] no valid options.query; derived fallback query: "${cleanedQuery}"`,
             );
-            return;
         }
 
         if (!isSearchTopic(options?.topic)) {

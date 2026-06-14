@@ -108,6 +108,7 @@ import {
     renderPromptInjectionDowngradeNotice,
 } from "../utils/promptInjectionDefense.ts";
 import { LIVE_TRADING_GLOBAL_KILL_REASON, isLiveTradingGlobalKillActive } from "../utils/liveTradingGlobalKill.ts";
+import { isPublicAccessModeActive } from "../utils/publicAccessMode.ts";
 import {
     buildUserError,
     renderUserErrorMarkdown,
@@ -2074,31 +2075,76 @@ async function generateLLMResponse(state: CEXWorkflowStateType): Promise<Partial
                         /\b(all|every|each|both|those|these)\b/i.test(msgText) ||
                         /(全部|所有|每个|这些|那些)/u.test(msgText);
                     if (isBatchRequest) {
-                        const batch = provider?.resolveAllOrdersFromContext?.({
-                            messageText: msgText,
-                            locale: state.locale ?? "en",
-                            recentAssistantMemories: extractAssistantMemoryRecords(state),
-                            venue: state.defaultExchangeId ?? null,
-                        });
-                        if (batch && batch.orders.length > 0) {
-                            // Pass every id the memory resolver found —
-                            // the venue cancel layer looks up symbol
-                            // per id at execute time, so multi-symbol
-                            // "cancel all" works natively. Surfacing a
-                            // single `product_id` only when all rows
-                            // share the same symbol; otherwise leave
-                            // it undefined so the modal field doesn't
-                            // mislead the user.
-                            const orderIds = batch.orders.map((o) => o.order_id);
+                        // Build the cancellable id set. PREFER the venue's
+                        // LIVE open orders (paper-aware) — they exclude
+                        // already-filled / cancelled legs that can't be
+                        // cancelled and would otherwise surface a confusing
+                        // "Not Found" in the cancel table (the reported bug).
+                        // Fall back to the recent-memory resolver only when
+                        // the live fetch is unavailable/empty — memory can't
+                        // tell a filled leg from an open one when the rendered
+                        // text lacks a per-order status word (e.g. a plan card
+                        // that just says "Submitted … Paper order id: …").
+                        const cancelUserId = state.message.userId;
+                        const cancelVenue = state.defaultExchangeId ?? null;
+                        let resolvedOrders: Array<{
+                            order_id: string;
+                            symbol?: string;
+                        }> = [];
+                        let cancelSource = "";
+
+                        if (provider?.fetchUserOpenOrders && cancelUserId) {
+                            try {
+                                const liveOpen = await provider.fetchUserOpenOrders({
+                                    runtime: state.runtime,
+                                    userId: cancelUserId,
+                                    venue: cancelVenue ?? "binance",
+                                });
+                                if (liveOpen && liveOpen.length > 0) {
+                                    resolvedOrders = liveOpen.map((o) => ({
+                                        order_id: o.order_id,
+                                        symbol: o.symbol,
+                                    }));
+                                    cancelSource = `live:${liveOpen.length}open`;
+                                }
+                            } catch (err) {
+                                elizaLogger.warn(
+                                    `[CEXWorkflow] ADK batch cancel live open-orders fetch failed (falling back to memory): ${err instanceof Error ? err.message : String(err)}`,
+                                );
+                            }
+                        }
+
+                        if (resolvedOrders.length === 0) {
+                            const batch = provider?.resolveAllOrdersFromContext?.({
+                                messageText: msgText,
+                                locale: state.locale ?? "en",
+                                recentAssistantMemories:
+                                    extractAssistantMemoryRecords(state),
+                                venue: cancelVenue,
+                            });
+                            if (batch && batch.orders.length > 0) {
+                                resolvedOrders = batch.orders;
+                                cancelSource = `memory:${batch.sourceMemoryId}`;
+                            }
+                        }
+
+                        if (resolvedOrders.length > 0) {
+                            // Pass every id found — the venue cancel layer
+                            // looks up symbol per id at execute time, so
+                            // multi-symbol "cancel all" works natively.
+                            // Surface a single `product_id` only when all
+                            // rows share one symbol; otherwise leave it
+                            // undefined so the modal field doesn't mislead.
+                            const orderIds = resolvedOrders.map((o) => o.order_id);
                             const symbols = new Set(
-                                batch.orders
+                                resolvedOrders
                                     .map((o) => o.symbol)
                                     .filter((s): s is string => !!s),
                             );
                             const sharedSymbol =
                                 symbols.size === 1 ? [...symbols][0] : undefined;
                             elizaLogger.info(
-                                `[CEXWorkflow] ADK batch cancel recovered: ${orderIds.length} orders across ${symbols.size} symbol(s) source=${batch.sourceMemoryId}`,
+                                `[CEXWorkflow] ADK batch cancel recovered: ${orderIds.length} orders across ${symbols.size} symbol(s) source=${cancelSource}`,
                             );
                             const synthetic = JSON.stringify({
                                 action: "cancel_order",
@@ -2806,7 +2852,13 @@ async function runRiskPrecheck(
             preferences && typeof preferences.default_mode === "string"
                 ? (preferences.default_mode as string).toLowerCase()
                 : undefined;
-        const candidate = (overrideMode ?? messageMode ?? prefMode ?? "live") as string;
+        // Public-demo safety net: when PUBLIC_ACCESS_MODE=1 the *fallback*
+        // (no C3 override, no params.mode, no saved pref) resolves to PAPER
+        // instead of LIVE — so a user with no preferences row can't trip the
+        // §6.0.2 fail-closed risk-audit gate. Explicit override / params.mode /
+        // saved pref still win, mirroring resolveTradingMode + getUserTradingMode.
+        const fallbackMode = isPublicAccessModeActive() ? "paper" : "live";
+        const candidate = (overrideMode ?? messageMode ?? prefMode ?? fallbackMode) as string;
         const resolvedMode: "live" | "paper" | "shadow" =
             candidate === "paper" || candidate === "shadow" ? candidate : "live";
         if (overrideMode) {
@@ -3392,7 +3444,10 @@ async function requestParameterReview(state: CEXWorkflowStateType): Promise<Part
     {
         const WRITE = new Set(["create_order", "cancel_order", "amend_order", "preview_order"]);
         const isWrite = WRITE.has(actionCall.action);
-        const resolvedMode = riskOutcome?.resolved_mode ?? "live";
+        // Defense-in-depth: if the risk precheck threw (riskOutcome === null),
+        // honor the public-demo paper default here too so the gate doesn't
+        // fail-closed a paper demo. PUBLIC_ACCESS_MODE unset ⇒ "live" (unchanged).
+        const resolvedMode = riskOutcome?.resolved_mode ?? (isPublicAccessModeActive() ? "paper" : "live");
         if (isWrite) {
             const provider = getCEXSpecProvider(state.runtime);
             const reconciliationSvc = state.runtime.getService<ITradingReconciliationService>(
@@ -4068,8 +4123,11 @@ async function requestParameterReview(state: CEXWorkflowStateType): Promise<Part
         // (and any downstream stages) can fork copy without re-deriving.
         // `riskOutcome` is computed at the top of this function via
         // `runRiskPrecheck`; its `resolved_mode` field is the same one
-        // the §6.0.2 fail-closed gate reads. Fail-closed default = "live".
-        resolvedExecutionMode: (riskOutcome?.resolved_mode ?? "live") as
+        // the §6.0.2 fail-closed gate reads. Fallback default = "live"
+        // (or "paper" under PUBLIC_ACCESS_MODE so a public-demo order never
+        // executes as live when the precheck was unavailable).
+        resolvedExecutionMode: (riskOutcome?.resolved_mode ??
+            (isPublicAccessModeActive() ? "paper" : "live")) as
             | "live"
             | "paper"
             | "shadow",

@@ -70,6 +70,12 @@ export {
     TASK_CHAIN_APPROVAL_CANCELLED_BY_DISCONNECT,
     getPendingApprovalForRoom,
 } from "./handlers/taskChainHandler.ts";
+// #6d — applied by the `/cex/plan/edit-step` route so a user's in-modal
+// order edits are merged into the pending plan step before they approve it.
+export {
+    applyPlanStepEdit,
+    getPlanById,
+} from "./handlers/cexPlanState.ts";
 // Re-exported so external tooling (e.g. scripts/eval-classifier-static.mjs)
 // can validate the CEX-bypass intent-shift behavior against the fixtures
 // without booting the agent.

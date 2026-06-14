@@ -39,7 +39,7 @@ import multer from "multer";
 import OpenAI from "openai";
 import * as path from "path";
 import { z } from "zod";
-import { createApiRouter, checkAuthenticated, requireAuth } from "./api.ts";
+import { createApiRouter, checkAuthenticated, requireAuth, publicOrRequireAuth } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
 import { FileProcessor } from "./fileProcessor.ts";
 import { ImageProcessor } from "@elizaos/core";
@@ -533,7 +533,7 @@ export class DirectClient {
 
         this.app.get(
             "/reports/DailyReports/:fileName",
-            requireAuth,
+            publicOrRequireAuth,
             async (req, res) => {
                 const raw = req.params.fileName;
                 if (!raw || raw.includes("..")) {
@@ -623,7 +623,7 @@ export class DirectClient {
         ];
         this.app.get(
             "/reports/DailyCharts/:fileName",
-            requireAuth,
+            publicOrRequireAuth,
             async (req, res) => {
                 const raw = req.params.fileName;
                 if (!raw || raw.includes("..")) {
