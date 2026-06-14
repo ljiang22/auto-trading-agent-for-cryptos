@@ -134,15 +134,19 @@ export const cryptoResearchSearch: Action = {
         elizaLogger.log("Options:", options);
         elizaLogger.log("===============================================");
 
-        const finalSearchQuery = cleanMessageTextForSearch(options?.query || "").replace(/^\w+:\s*/i, "");
+        let finalSearchQuery = cleanMessageTextForSearch(options?.query || "").replace(/^\w+:\s*/i, "");
         if (!finalSearchQuery || finalSearchQuery.length < 2) {
-            await callback(createActionErrorResponse({
-                actionName: "CRYPTO_RESEARCH_SEARCH",
-                type: "crypto_research_search_error",
-                error: new Error("CRYPTO_RESEARCH_SEARCH requires a valid query parameter"),
-                text: "CRYPTO_RESEARCH_SEARCH requires a valid query parameter from the workflow.",
-            }));
-            return;
+            // Resilient fallback: a workflow step that didn't thread `query`
+            // should still run using the task/message text (then a domain
+            // default) rather than hard-fail the whole task.
+            const fromMessage = cleanMessageTextForSearch(message?.content?.text || "").replace(/^\w+:\s*/i, "");
+            finalSearchQuery =
+                fromMessage && fromMessage.length >= 2
+                    ? fromMessage
+                    : "cryptocurrency research analysis and market outlook";
+            elizaLogger.warn(
+                `[CRYPTO_RESEARCH_SEARCH] no valid options.query; derived fallback query: "${finalSearchQuery}"`,
+            );
         }
 
         elizaLogger.log("Final crypto research query:", finalSearchQuery);

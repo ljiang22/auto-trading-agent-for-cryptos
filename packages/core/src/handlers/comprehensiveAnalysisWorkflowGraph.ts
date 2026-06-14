@@ -260,7 +260,7 @@ export const COMPREHENSIVE_ANALYSIS_ACTIONS: ComprehensiveAnalysisActionConfig[]
     // Phase 1: Data Collection
     { name: "GET_ADDRESS_AND_TRANSACTION_DATA", phase: "data_gathering", consumesDataRetention: false, promptPriority: 11, promptMaxChars: 6000  },
     { name: "GET_CRYPTO_PRICE",                 phase: "data_gathering", consumesDataRetention: true,  promptPriority: 6,  promptMaxChars: 8000  },
-    { name: "getnews",                          phase: "data_gathering", consumesDataRetention: false, promptPriority: 8,  promptMaxChars: 10000 },
+    { name: "getnews",                          phase: "data_gathering", consumesDataRetention: false, promptPriority: 8,  promptMaxChars: 800 },
     { name: "WHALE_ALERT",                      phase: "data_gathering", consumesDataRetention: false, promptPriority: 7,  promptMaxChars: 8000  },
     { name: "web_search",                       phase: "data_gathering", consumesDataRetention: false, promptPriority: 10, promptMaxChars: 5000  },
     { name: "CRYPTO_RESEARCH_SEARCH",           phase: "data_gathering", consumesDataRetention: false, promptPriority: 9,  promptMaxChars: 8000  },

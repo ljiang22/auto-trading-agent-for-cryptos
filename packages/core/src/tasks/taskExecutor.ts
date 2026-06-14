@@ -12,6 +12,7 @@ import {
 import { DefaultDependencyResolver } from "./dependencyResolver.ts";
 import { ActionCacheManager } from "../data/actionCacheManager.ts";
 import { getNonCEXActions } from "../utils/pluginFilter.ts";
+import { parseJSONObjectFromText } from "../validation/parsing.ts";
 import {
     type TaskExecutor,
     type TaskNode,
@@ -1052,27 +1053,43 @@ async function runLLMTask(
 
     elizaLogger.info(`[TaskExecutor] LLM task "${task.name}" completed`);
 
-    // Parse JSON response with results and summary
+    // Parse the {results, summary} envelope. The "results" field holds multi-line
+    // markdown (literal newlines/control chars) which a bare JSON.parse rejects — use
+    // the robust extractor (fence-strips + escapes in-string control chars) to recover
+    // the inner markdown. CRITICAL: a raw ```json envelope must NEVER survive as
+    // resultText, or it leaks into the live SSE stream (createTaskMemory ->
+    // intermediateResultCallback) and the final task-chain response (extractTaskText).
     let parsedResponse: { results: string; summary: string } | null = null;
     let resultText = response.trim();
     let summaryText = '';
 
-    try {
-        // Try to extract JSON from the response
-        const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
-        const jsonContent = jsonMatch ? jsonMatch[1] : response;
-        
-        // Try parsing as JSON
-        const parsed = JSON.parse(jsonContent.trim());
-        if (parsed.results && typeof parsed.results === 'string') {
-            parsedResponse = parsed;
-            resultText = parsed.results;
-            summaryText = parsed.summary || '';
-            elizaLogger.info(`[TaskExecutor] LLM task "${task.name}" parsed JSON response with summary`);
+    const parsed = parseJSONObjectFromText(response) as
+        | { results?: unknown; summary?: unknown }
+        | null;
+    if (parsed && typeof parsed.results === 'string') {
+        summaryText = typeof parsed.summary === 'string' ? parsed.summary : '';
+        parsedResponse = { results: parsed.results, summary: summaryText };
+        resultText = parsed.results;
+        elizaLogger.info(`[TaskExecutor] LLM task "${task.name}" parsed JSON envelope (results+summary)`);
+    } else {
+        // Envelope unparseable. Defense-in-depth: if the raw text still looks like a
+        // ```json / {"results": ...} envelope, strip the fence + the results-key wrapper
+        // so the raw JSON wrapper is NEVER shown to the user; otherwise treat as markdown.
+        const fenceMatch = resultText.match(/```json\s*([\s\S]*?)\s*```/i);
+        if (fenceMatch) resultText = fenceMatch[1].trim();
+        if (/^\s*\{[\s\S]*"results"\s*:/.test(resultText)) {
+            const m = resultText.match(/"results"\s*:\s*"((?:\\.|[^"\\])*)"/);
+            if (m) {
+                try {
+                    resultText = JSON.parse(`"${m[1]}"`);
+                } catch {
+                    resultText = m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                }
+            }
+            elizaLogger.warn(`[TaskExecutor] LLM task "${task.name}" envelope unparseable; recovered inner markdown via fallback`);
+        } else {
+            elizaLogger.debug(`[TaskExecutor] LLM task "${task.name}" response is plain text (no envelope)`);
         }
-    } catch {
-        // Not valid JSON, use raw response as text
-        elizaLogger.debug(`[TaskExecutor] LLM task "${task.name}" response is not JSON, using raw text`);
     }
 
     return {

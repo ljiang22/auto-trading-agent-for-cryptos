@@ -2830,6 +2830,33 @@ export default function Page({ agentId, roomId }: { agentId: UUID; roomId: UUID 
                     ? null
                     : current,
             );
+            // #6d — persist the user's in-modal edits to the plan step BEFORE
+            // sending the "yes" continuation, so the order that executes (and
+            // the result/plan card) reflects their changes. Whitelist-merged
+            // server-side; a no-op when nothing changed. Awaited so "yes"
+            // can't race the plan runner into executing the un-edited step.
+            // Non-fatal: on failure we still confirm the (un-edited) step.
+            const planId = submitted.plan_context.plan_id;
+            const stepIndex = submitted.plan_context.step_index;
+            if (
+                typeof planId === "string" &&
+                Number.isInteger(stepIndex) &&
+                parameters &&
+                Object.keys(parameters).length > 0
+            ) {
+                try {
+                    await apiClient.editPlanStep(agentId, {
+                        planId,
+                        stepIndex,
+                        parameters,
+                    });
+                } catch (err) {
+                    console.warn(
+                        "[plan-step] editPlanStep failed (non-fatal); confirming un-edited step",
+                        err,
+                    );
+                }
+            }
             window.dispatchEvent(
                 new CustomEvent("sentiedge:chat-send", {
                     detail: { text: "yes" },

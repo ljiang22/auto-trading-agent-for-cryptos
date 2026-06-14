@@ -6,12 +6,19 @@ const comprehensive_analysis: Template = { system: `# Comprehensive Cryptocurren
 
 You are tasked with creating a comprehensive analysis of the target cryptocurrency from multiple perspectives to provide a holistic view for potential investors. Follow this structured template to ensure thorough coverage of all relevant aspects.
 
+## CRITICAL OUTPUT CONSTRAINTS (override any per-section guidance below)
+- TOTAL output MUST be under ~8000 characters. The word counts in the sections below are MAXIMUM ceilings, not targets — be far more concise.
+- BOTTOM-LINE FIRST: open with a 2-3 sentence verdict (BUY / HOLD / SELL + the single key reason).
+- NEVER paste raw tool output, raw news items (lines starting with '📰' or 'TITLE:'), JSON, or unformatted metric blocks. SYNTHESIZE every data point into prose.
+- If the user appears to be a beginner (small budget, "I don't know", plain wording), limit jargon (ADX, liquidation cascade, funding rate) — define inline in plain language or omit it.
+- Prefer 5-6 tight sections (Executive Summary → Market/Technicals → Sentiment → On-Chain → Bull/Base/Bear → Bottom line). Drop sections that have no data rather than padding.
+
 ---
 
 ## Analysis Structure Template
 
 ### 1. Executive Summary
-Provide a comprehensive yet concise overview (200-300 words) covering:
+Provide a comprehensive yet concise overview (≤120 words) covering:
 - **Market Position Analysis**: Current ranking and market dominance context
 - **Current Valuation Metrics**: Price, market cap, and sector comparison
 - **Sentiment Intelligence**: Multi-source sentiment scores with key indicators
@@ -218,7 +225,7 @@ Provide a comprehensive yet concise overview (200-300 words) covering:
 
 ### 11. Price Predictions and Forecasting Analysis (AI-Powered Intelligence)
 
-Generate a comprehensive, standalone prediction section (400-500 words) using this exact format:
+Generate a comprehensive, standalone prediction section (≤180 words) using this exact format:
 
 **Current Market Assessment:**
 - Overall market condition with confidence score (%)
@@ -311,7 +318,7 @@ Generate a comprehensive, standalone prediction section (400-500 words) using th
 
 ### 15. Conclusion & Strategic Investment Decision Framework
 
-#### Analysis Summary (300words)
+#### Analysis Summary (≤120 words)
 - **Key Findings**: Integration of technical, fundamental, sentiment, and on-chain analysis
 - **Investment Recommendation**: Clear BUY/HOLD/SELL with confidence level (0-100%)
 - **Risk-Return Expectations**: Expected returns with downside protection analysis
@@ -344,12 +351,12 @@ Generate a comprehensive, standalone prediction section (400-500 words) using th
 "Please provide a comprehensive analysis of the target cryptocurrency following the structured template above. 
 
 **Analysis Requirements:**
-- **Executive Summary**: 200-300 words covering market position, sentiment intelligence, predictions, and allocation recommendations
-- **Sentiment Analysis**: 400 words of multi-source sentiment intelligence with statistical analysis and market psychology assessment
-- **On-Chain Data Analysis**: 300 words covering whale activity monitoring and exchange flow analysis
-- **Technical Analysis**: 300 words of multi-timeframe technical intelligence with trend, momentum, and volatility analysis
-- **Price Predictions**: 300 words of AI-powered forecasting with short/medium/long-term outlook and confidence framework
-- **Strategic Conclusion**: 300 words synthesis with clear investment recommendation and risk assessment
+- **Executive Summary**: ≤120 words covering market position, sentiment intelligence, predictions, and allocation recommendations
+- **Sentiment Analysis**: ≤120 words of multi-source sentiment intelligence with statistical analysis and market psychology assessment
+- **On-Chain Data Analysis**: ≤100 words covering whale activity monitoring and exchange flow analysis
+- **Technical Analysis**: ≤120 words of multi-timeframe technical intelligence with trend, momentum, and volatility analysis
+- **Price Predictions**: ≤120 words of AI-powered forecasting with short/medium/long-term outlook and confidence framework
+- **Strategic Conclusion**: ≤100 words synthesis with clear investment recommendation and risk assessment
 
 **Data Integration Focus:**
 - Integrate real-time sentiment data from news and social media sources

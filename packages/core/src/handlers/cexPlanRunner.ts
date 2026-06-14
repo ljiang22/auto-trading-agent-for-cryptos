@@ -40,7 +40,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import type { z } from "zod";
+import { z } from "zod";
 
 import { elizaLogger } from "../utils/logger.ts";
 import { generateText } from "../ai/generation.ts";
@@ -88,7 +88,15 @@ import {
     renderStepResultBlock,
 } from "./cexPlanExecutor.ts";
 import { parseContinuation, type CexContinuationResult } from "./cexContinuationParser.ts";
-import { isExecutionStatusQuery, isStrategyAdviceQuery } from "./cexExecutionIntent.ts";
+import {
+    classifyContinuationWithLLM,
+    type ContinuationClassifierContext,
+} from "./cexContinuationLLM.ts";
+import {
+    isExecutionStatusQuery,
+    isStrategyAdviceQuery,
+    isStrategyRefinementQuery,
+} from "./cexExecutionIntent.ts";
 import {
     getSessionExecutionMode,
     setSessionExecutionMode,
@@ -159,14 +167,113 @@ export async function runPlanModeIfApplicable(
         elizaLogger.info(
             `[CexPlanRunner] continuation parse: command=${parsed.command} plan=${active.id} match=${parsed.match ?? "(none)"}`,
         );
-        if (parsed.command === "EXECUTION_STATUS") {
-            return await renderExecutionStatusReport(ctx, active);
-        }
         if (parsed.command === "UNKNOWN") {
-            // Status-like queries are handled above; other off-topic
-            // messages cancel the plan and fall through to legacy CEX.
+            // The regex fast-path couldn't classify this reply. Rather than
+            // immediately re-prompt/cancel, ask the LLM to decide WITH the
+            // plan + recent-conversation context — the contextual decider the
+            // standalone regex lacks. The LLM runs ONLY on UNKNOWN, so clean
+            // yes / no / cancel / delegate stay on the cheap regex path.
+            const llm = await classifyContinuationWithLLM({
+                runtime: ctx.runtime,
+                userId: String(ctx.message.userId),
+                ctx: await buildContinuationContext(ctx, active),
+            });
+            elizaLogger.info(
+                `[CexPlanRunner] LLM continuation decider: intent=${llm.intent} plan=${active.id} reason=${llm.reason ?? "(none)"}`,
+            );
+
+            if (llm.intent === "NON_TRADING") {
+                // A genuine non-trading question reached the plan runner.
+                // PRESERVE the plan (do NOT cancel) and fall through so the
+                // regular/legacy layer answers it; the user can resume with
+                // "yes" afterwards.
+                if ((active.clarify_nudges ?? 0) !== 0) {
+                    updatePlan(active.id, (p) => {
+                        p.clarify_nudges = 0;
+                    });
+                }
+                return null;
+            }
+
+            if (llm.intent === "MODIFY") {
+                // Keep the plan and ask for the concrete change. (Live
+                // re-decomposition is a future enhancement; for v1 we surface
+                // the plan and invite a specific edit or an approval.)
+                const refreshed =
+                    updatePlan(active.id, (p) => {
+                        p.status = "awaiting_approval";
+                        p.clarify_nudges = 0;
+                    }) ?? active;
+                const note =
+                    'Sure — tell me exactly what to change (amounts, prices, or add a stop-loss) and I\'ll update the plan, or reply **"yes"** to proceed as shown.';
+                const card = await renderPlanCardWithResults(
+                    refreshed,
+                    { include_next_prompt: true },
+                    ctx,
+                );
+                return [
+                    await persistFinalMemory(ctx, `${note}\n\n${card}`, {
+                        kind: "plan_card",
+                        planId: active.id,
+                        awaitingApproval: true,
+                    }),
+                ];
+            }
+
+            if (llm.intent !== "UNCLEAR") {
+                // APPROVE_NEXT / APPROVE_BATCH / CANCEL_PLAN / SKIP_STEP /
+                // DELEGATE — dispatch through the SAME approval-gated handlers
+                // as the regex path.
+                if ((active.clarify_nudges ?? 0) !== 0) {
+                    updatePlan(active.id, (p) => {
+                        p.clarify_nudges = 0;
+                    });
+                }
+                return await applyContinuation(ctx, active, {
+                    command: llm.intent as CexContinuationResult["command"],
+                    match: `llm:${llm.reason ?? ""}`,
+                });
+            }
+
+            // UNCLEAR — non-destructive soft re-prompt: preserve the plan on
+            // the first unrecognized reply, cancel on the second consecutive.
+            const nudges = active.clarify_nudges ?? 0;
+            if (nudges < 1) {
+                const refreshed =
+                    updatePlan(active.id, (p) => {
+                        p.clarify_nudges = nudges + 1;
+                    }) ?? active;
+                const idx = nextWriteStep(refreshed);
+                const prompt =
+                    idx !== null
+                        ? 'I didn\'t quite catch that. Reply **"yes"** to proceed with the next step, **"no"** to cancel, or tell me what to change.'
+                        : 'I didn\'t quite catch that. Reply **"no"** to cancel, or ask me for a status update.';
+                const card = await renderPlanCardWithResults(
+                    refreshed,
+                    { include_next_prompt: true },
+                    ctx,
+                );
+                return [
+                    await persistFinalMemory(ctx, `${prompt}\n\n${card}`, {
+                        kind: "plan_card",
+                        planId: active.id,
+                        awaitingApproval: true,
+                    }),
+                ];
+            }
             cancelPlan(active.id, "user_topic_shift");
             return null;
+        }
+
+        // Recognized command — reset the consecutive-unknown counter.
+        if ((active.clarify_nudges ?? 0) !== 0) {
+            updatePlan(active.id, (p) => {
+                p.clarify_nudges = 0;
+            });
+        }
+
+        if (parsed.command === "EXECUTION_STATUS") {
+            return await renderExecutionStatusReport(ctx, active);
         }
         return await applyContinuation(ctx, active, parsed);
     }
@@ -179,6 +286,18 @@ export async function runPlanModeIfApplicable(
     // "execute this strategy" commitment still decomposes normally.
     if (isStrategyAdviceQuery(messageText)) {
         elizaLogger.info("[CexPlanRunner] strategy-advice query — skipping plan mode (conversational layer answers)");
+        return null;
+    }
+    // #4 — Strategy REFINEMENT without an explicit execution instruction
+    // ("modify it: buy $300 now…", "make it $400 instead") is the user
+    // iterating on the strategy, not committing to it. Skip plan mode so the
+    // conversational layer re-presents the updated strategy for review; only
+    // an explicit "execute / place / proceed" (isExplicitExecuteCommand,
+    // which this guard already excludes) decomposes into an order plan card.
+    // Prevents the agent from jumping straight to an execution plan on every
+    // tweak.
+    if (isStrategyRefinementQuery(messageText)) {
+        elizaLogger.info("[CexPlanRunner] strategy refinement without execute instruction — skipping plan mode (re-present for review/iteration)");
         return null;
     }
     const plan = await decomposeMessage(ctx);
@@ -250,7 +369,7 @@ export async function runPlanModeIfApplicable(
     }
 
     // 4. Multi-step plan — persist and execute.
-    const planToSave = injectValidationStepsIfNeeded(plan, messageText);
+    const planToSave = injectStatusReadsIfNeeded(injectValidationStepsIfNeeded(plan, messageText), messageText);
     const { priorPlanCancelled } = savePlan(planToSave);
     if (priorPlanCancelled) {
         elizaLogger.info(
@@ -368,50 +487,66 @@ async function decomposeMessage(ctx: RunPlanModeContext): Promise<CexPlan | null
         template: getCexDecomposeTemplate(),
     });
 
-    let response: string;
-    try {
-        response = await generateText({
-            runtime: ctx.runtime,
-            system,
-            prompt,
-            modelClass: ModelClass.MEDIUM,
-            userId: ctx.message.userId,
-            temperature: 0,
-            maxTokens: 2048,
-            thinkingBudget: 0,
-            bypassModelClassDowngrades: true,
-        });
-    } catch (error) {
-        elizaLogger.warn(
-            `[CexPlanRunner] decomposer LLM call failed (falling through to legacy): ${error instanceof Error ? error.message : String(error)}`,
+    // Decompose with a bounded RETRY. A complex multi-tranche "modify + execute"
+    // request (e.g. "$300 now, $300 @ -5%, $200 @ -10%") sometimes makes the SMALL/
+    // MEDIUM model emit a non-conforming object (missing `steps`/`summary`), which
+    // dropped the whole plan to the legacy single-action path (the per-step eval's
+    // step4B/step4approve + both critical failures). On a parse/schema miss we retry
+    // ONCE with a corrective instruction + a larger token budget before giving up.
+    let parsedZod:
+        | z.SafeParseReturnType<unknown, z.infer<typeof CexPlanDecomposedSchema>>
+        | null = null;
+    for (let attempt = 1; attempt <= 2 && !(parsedZod && parsedZod.success); attempt += 1) {
+        const attemptPrompt =
+            attempt === 1
+                ? prompt
+                : `${prompt}\n\nYOUR PREVIOUS RESPONSE WAS INVALID. Return ONLY a single JSON object with a top-level "steps" array (each step: {id, action, parameters, depends_on, description}) and a "summary" string — no prose, no markdown fences, nothing else.`;
+        let response: string;
+        try {
+            response = await generateText({
+                runtime: ctx.runtime,
+                system,
+                prompt: attemptPrompt,
+                modelClass: ModelClass.MEDIUM,
+                userId: ctx.message.userId,
+                temperature: 0,
+                maxTokens: attempt === 1 ? 2048 : 4096,
+                thinkingBudget: 0,
+                bypassModelClassDowngrades: true,
+            });
+        } catch (error) {
+            elizaLogger.warn(
+                `[CexPlanRunner] decomposer LLM call failed (attempt ${attempt}): ${error instanceof Error ? error.message : String(error)}`,
+            );
+            continue;
+        }
+        elizaLogger.debug(
+            `[CexPlanRunner] decomposer raw response (attempt ${attempt}, len=${response.length}): ${response.slice(0, 600)}`,
         );
-        return null;
+        const json = extractJsonObject(response);
+        if (!json) {
+            elizaLogger.warn(
+                `[CexPlanRunner] decomposer attempt ${attempt} returned no parseable JSON`,
+            );
+            continue;
+        }
+        try {
+            parsedZod = CexPlanDecomposedSchema.safeParse(JSON.parse(json));
+        } catch (error) {
+            elizaLogger.warn(
+                `[CexPlanRunner] decomposer attempt ${attempt} JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            continue;
+        }
+        if (!parsedZod.success) {
+            elizaLogger.warn(
+                `[CexPlanRunner] decomposer attempt ${attempt} schema validation failed: ${parsedZod.error.message}`,
+            );
+        }
     }
-
-    elizaLogger.debug(
-        `[CexPlanRunner] decomposer raw response (len=${response.length}): ${response.slice(0, 600)}`,
-    );
-
-    const json = extractJsonObject(response);
-    if (!json) {
+    if (!parsedZod || !parsedZod.success) {
         elizaLogger.warn(
-            `[CexPlanRunner] decomposer returned no parseable JSON; falling through to legacy`,
-        );
-        return null;
-    }
-
-    let parsedZod: z.SafeParseReturnType<unknown, z.infer<typeof CexPlanDecomposedSchema>>;
-    try {
-        parsedZod = CexPlanDecomposedSchema.safeParse(JSON.parse(json));
-    } catch (error) {
-        elizaLogger.warn(
-            `[CexPlanRunner] decomposer JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        return null;
-    }
-    if (!parsedZod.success) {
-        elizaLogger.warn(
-            `[CexPlanRunner] decomposer schema validation failed: ${parsedZod.error.message}`,
+            `[CexPlanRunner] decomposer failed after retries; falling through to legacy`,
         );
         return null;
     }
@@ -507,6 +642,53 @@ async function resolveExecutionMode(ctx: RunPlanModeContext): Promise<CexExecuti
     return "paper";
 }
 
+/**
+ * Deterministically fetch the live reads a status report needs (mark price, remaining balance,
+ * filled+open orders) and append them to a WORKING COPY of the plan as `ok` steps. This is the
+ * continuation-path equivalent of `injectStatusReadsIfNeeded` + `executeReadyReads` on the
+ * fresh-decomposition path: an active-plan status query (`renderExecutionStatusReport`) otherwise
+ * renders ONLY the persisted plan steps, so sections C/D/E ("Performance", "Market update", "Risk
+ * status") had no live ticker/balance to work from — the per-step eval failed step5 on exactly this
+ * ("A live mark was not fetched; unrealized PnL is unavailable. Remaining balance ... not provided").
+ *
+ * Read-only + fail-soft: any read failure leaves that section honest-empty (the LLM synthesizer
+ * states what is missing) instead of blocking the report. The original `plan` is never mutated —
+ * the appended steps live only on the returned copy used to synthesize this one report.
+ */
+async function fetchLiveStatusReads(
+    ctx: RunPlanModeContext,
+    plan: CexPlan,
+): Promise<CexPlan> {
+    const have = new Set(plan.steps.map((s) => s.action));
+    const wanted: Array<{ id: string; action: string; parameters: Record<string, unknown>; description: string }> = [];
+    if (!have.has("get_ticker")) wanted.push({ id: "live-ticker", action: "get_ticker", parameters: { product_ids: ["BTCUSDT"] }, description: "Live mark price for performance/market sections" });
+    if (!have.has("get_balance")) wanted.push({ id: "live-balance", action: "get_balance", parameters: {}, description: "Remaining capital for the risk section" });
+    if (!have.has("get_orders")) wanted.push({ id: "live-orders", action: "get_orders", parameters: { history: true }, description: "Filled + open orders" });
+    if (wanted.length === 0) return plan;
+
+    elizaLogger.info(
+        `[CexPlanRunner] fetching ${wanted.length} live status read(s) for active-plan status query ${plan.id}: ${wanted.map((w) => w.action).join(", ")}`,
+    );
+    const fetched = await Promise.all(
+        wanted.map(async (w) => {
+            const step = inflateStep({ id: w.id, action: w.action, venue: null, parameters: w.parameters, depends_on: [], description: w.description });
+            const completed_at = Date.now();
+            try {
+                const res = await invokeAction(ctx, step);
+                step.status = res.ok ? "ok" : "failed";
+                step.result = res.ok
+                    ? { payload: res.payload, completed_at }
+                    : { error: res.error ?? "read failed", completed_at };
+            } catch (err) {
+                step.status = "failed";
+                step.result = { error: err instanceof Error ? err.message : String(err), completed_at };
+            }
+            return step;
+        }),
+    );
+    return { ...plan, steps: [...plan.steps.map((s) => ({ ...s })), ...fetched] };
+}
+
 async function renderExecutionStatusReport(
     ctx: RunPlanModeContext,
     plan: CexPlan,
@@ -515,6 +697,24 @@ async function renderExecutionStatusReport(
         getSessionExecutionMode(String(ctx.message.userId), String(ctx.message.roomId))
         ?? (await resolveExecutionMode(ctx));
     setSessionExecutionMode(String(ctx.message.userId), String(ctx.message.roomId), mode);
+
+    // Deterministically gather live mark + balance + orders, then synthesize a status report that
+    // can fill the Performance (PnL) / Market trend / Risk (remaining balance) sections. The system
+    // prompt's "invoke get_price + get_balance before any status report" directive is NOT sufficient
+    // on this path: `renderExecutionStatusReport` is pure deterministic markdown construction — it
+    // never calls the LLM and never invokes an action, so the prompt directive cannot reach it.
+    // Mirror the fresh-decomposition path (injectStatusReadsIfNeeded → synthesizeStatusReportViaLLM).
+    try {
+        const enriched = await fetchLiveStatusReads(ctx, plan);
+        const report = await synthesizeStatusReportViaLLM(enriched, ctx);
+        if (report) {
+            return [await persistFinalMemory(ctx, report, { kind: "status_report", planId: plan.id })];
+        }
+    } catch (err) {
+        elizaLogger.warn(
+            `[CexPlanRunner] live status enrichment failed (falling back to deterministic card): ${err instanceof Error ? err.message : String(err)}`,
+        );
+    }
 
     const modeBadge =
         mode === "paper"
@@ -609,6 +809,51 @@ async function renderExecutionStatusReport(
     ];
 }
 
+/**
+ * Build the context the LLM continuation decider needs: the next pending
+ * write, plan status/summary, remaining-write count, and a compact recent-
+ * conversation transcript. Best-effort — never throws.
+ */
+async function buildContinuationContext(
+    ctx: RunPlanModeContext,
+    plan: CexPlan,
+): Promise<ContinuationClassifierContext> {
+    const idx = nextWriteStep(plan);
+    const nextStep = idx !== null ? plan.steps[idx] : null;
+    const remainingWrites = plan.steps.filter((s) => s.status === "pending").length;
+    let recentMessages = "(none)";
+    try {
+        const mems = await ctx.runtime.messageManager.getMemories({
+            roomId: ctx.message.roomId,
+            count: 6,
+            unique: false,
+        });
+        const lines = (mems ?? [])
+            .slice()
+            .reverse()
+            .map((m) => {
+                const who = m.userId === ctx.message.agentId ? "assistant" : "user";
+                const t = String(m.content?.text ?? "")
+                    .replace(/\s+/g, " ")
+                    .slice(0, 200);
+                return t ? `${who}: ${t}` : "";
+            })
+            .filter(Boolean);
+        if (lines.length) recentMessages = lines.join("\n");
+    } catch {
+        /* best-effort context only */
+    }
+    return {
+        userMessage: String(ctx.message.content?.text ?? ""),
+        nextStepAction: nextStep?.action ?? null,
+        nextStepDescription: nextStep?.description ?? null,
+        planStatus: plan.status,
+        planSummary: plan.summary,
+        remainingWrites,
+        recentMessages,
+    };
+}
+
 async function applyContinuation(
     ctx: RunPlanModeContext,
     plan: CexPlan,
@@ -654,6 +899,40 @@ async function applyContinuation(
 
     if (parsed.command === "EXECUTION_STATUS") {
         return await renderExecutionStatusReport(ctx, plan);
+    }
+
+    // DELEGATE — the user deferred the decision to the agent ("you
+    // decide" / "use your best judgement"). Do NOT execute and do NOT
+    // cancel: re-render the awaiting-approval card for the next pending
+    // write with the planned parameters surfaced, and require ONE
+    // explicit confirmation before executing. Any defaults were already
+    // chosen by the decomposer; the user sees them and confirms or
+    // corrects — a vague deferral never silently executes a live write.
+    if (parsed.command === "DELEGATE") {
+        const idx = nextWriteStep(plan);
+        if (idx === null) {
+            // Nothing left to approve — just report current status.
+            return await renderExecutionStatusReport(ctx, plan);
+        }
+        const refreshed =
+            updatePlan(plan.id, (p) => {
+                p.status = "awaiting_approval";
+            }) ?? plan;
+        const note =
+            'You asked me to use my judgement — I\'ll proceed with the next step using the parameters shown below. **Reply "yes" to execute it**, or tell me what to change.';
+        const card = await renderPlanCardWithResults(
+            refreshed,
+            { include_next_prompt: true },
+            ctx,
+        );
+        await emitPlanApprovalModal(ctx, refreshed, idx);
+        return [
+            await persistFinalMemory(ctx, `${note}\n\n${card}`, {
+                kind: "plan_card",
+                planId: plan.id,
+                awaitingApproval: true,
+            }),
+        ];
     }
 
     return null;
@@ -760,7 +1039,7 @@ async function executeReadyReads(
     ctx: RunPlanModeContext,
     planId: string,
 ): Promise<void> {
-    const plan = getActivePlanById(planId);
+    let plan = getActivePlanById(planId);
     if (!plan) return;
 
     const idxs = readableSteps(plan);
@@ -948,8 +1227,8 @@ async function fillMissingLimitPrice(
         const productId = typeof params.product_id === "string" ? params.product_id : "BTC-USDT";
         const symbol = productId.replace(/-/g, "").toUpperCase();
         const tick = await provider?.fetchBookTicker?.(symbol, venue);
-        const bid = tick ? Number.parseFloat(tick.bid) : Number.NaN;
-        const ask = tick ? Number.parseFloat(tick.ask) : Number.NaN;
+        const bid = tick ? Number.parseFloat(tick.bid) : NaN;
+        const ask = tick ? Number.parseFloat(tick.ask) : NaN;
         if (Number.isFinite(bid) && Number.isFinite(ask) && bid > 0 && ask > 0) mid = (bid + ask) / 2;
     } catch (err) {
         elizaLogger.warn(
@@ -1288,33 +1567,54 @@ export async function synthesizeStatusReportViaLLM(
     ctx: RunPlanModeContext,
 ): Promise<string | null> {
     try {
-        const payloads = plan.steps.map((s) => ({
-            action: s.action,
-            status: s.status,
-            description: s.description,
-            payload: s.status === "ok" ? (s.result?.payload ?? null) : (s.result?.error ?? null),
-        }));
-        let serialized: string;
-        try {
-            serialized = JSON.stringify(payloads, null, 2);
-        } catch {
-            return null;
-        }
-        if (serialized.length > 6000) {
-            serialized = `${serialized.slice(0, 6000)}\n…[truncated]`;
-        }
+        // Serialize PER-STEP with individual caps — a single global truncation let the large
+        // orders/fills payloads crowd the small ticker/balance payloads out of the prompt, so the
+        // synthesis honestly (but wrongly) reported "live mark was not fetched" while get_ticker
+        // had succeeded.
+        const perStepCap = 1400;
+        const serializeOne = (s: (typeof plan.steps)[number]): string => {
+            const entry = {
+                action: s.action,
+                status: s.status,
+                description: s.description,
+                payload: s.status === "ok" ? (s.result?.payload ?? null) : (s.result?.error ?? null),
+            };
+            try {
+                const j = JSON.stringify(entry);
+                return j.length > perStepCap ? `${j.slice(0, perStepCap)}…[step payload truncated]` : j;
+            } catch {
+                return JSON.stringify({ action: s.action, status: s.status, payload: "[unserializable]" });
+            }
+        };
+        const serialized = `[${plan.steps.map(serializeOne).join(",\n")}]`;
         const mode = await resolveExecutionMode(ctx);
+        // Recover the strategy context (name / user-modified vs recommended / plan status) from the
+        // room's most recent plan-card memory, so section A can be factual instead of omitted.
+        let strategyContext = "";
+        try {
+            const recents = await ctx.runtime.messageManager.getMemories({ roomId: ctx.message.roomId, count: 12, unique: false });
+            const planCard = (recents ?? []).find((m) => {
+                const md = (m.content?.metadata ?? {}) as Record<string, unknown>;
+                const pr = md.cexPlanRunner as Record<string, unknown> | undefined;
+                return pr?.kind === "plan_card";
+            });
+            if (planCard) strategyContext = String(planCard.content?.text ?? "").slice(0, 400);
+        } catch {
+            /* best-effort — section A states honestly when absent */
+        }
         const system = [
-            "You are a precise trading-status reporter for a crypto agent. Write a concise execution status report in markdown from the JSON step results.",
-            "Structure (omit a section ONLY when the data for it is entirely absent, and say so in one honest line instead):",
-            "1. **Order Status** — each order: side, symbol, quantity, price, USD value, status (filled/open/cancelled), order ID (short).",
-            "2. **Position & Performance** — total deployed USD, average entry, and current value/PnL ONLY if mark/ticker data is present; otherwise state that a live mark price was not fetched.",
-            "3. **Risk Status** — capital deployed vs. remaining (derive only from the data), no leverage unless shown.",
-            "4. **Next Steps** — one or two factual recommendations phrased as USER actions in second person (e.g. \"Ask me for a status update anytime\", \"You may want to place a stop-loss order\"). NEVER phrase a next step as something the agent or system will do on its own — do not write \"Monitor the position\", \"I will watch\", \"track the market\", or any phrasing implying ongoing monitoring exists.",
+            "You are a precise trading-status reporter for a crypto agent. Write a CONCISE execution status report in markdown from the JSON step results — every section 1-3 lines, total under ~2,500 characters.",
+            "Use EXACTLY these sections (when a section's data is absent, keep the heading and state in ONE honest line what is missing):",
+            "**A. Strategy status** — strategy name, agent-recommended vs user-modified, plan state (completed/awaiting/paused), trading mode. Derive from the strategy context below when present.",
+            "**B. Order status** — each order: side, symbol, quantity, price, USD value, status (filled/open/cancelled), short order ID. Cross-reference every order against the APPROVED plan in the strategy context: for each approved tranche state which plan step it fulfils, and for any filled order whose ID is NOT part of the approved plan, explicitly flag it as '⚠️ unrecognized — not part of the approved plan' and note it may be stale/leftover — do NOT present it as an approved trade.",
+            "**C. Performance** — total deployed USD, average entry, current value + unrealized PnL ONLY if mark/ticker data is present; else say a live mark was not fetched.",
+            "**D. Market update** — REQUIRED: state (1) the current mark price and its position vs the user's average entry, (2) the 24h trend direction — bullish if change_pct_24h > 0, bearish if < 0, neutral if ~flat, (3) the 24h high/low as rough resistance/support, and (4) short-term momentum. DERIVE all of these from the ticker's 24h stats in the JSON (change_pct_24h, high_24h, low_24h). Do not invent numbers, but you MUST report the trend whenever those 24h fields are present; only write 'live trend data unavailable' if they are genuinely absent.",
+            "**E. Risk status** — capital deployed vs the $-limit and remaining balance (from the balance payload when present); leverage only if shown.",
+            "**F. Recommendation** — ONE practical next step phrased as a USER action in second person (e.g. \"You may want to place a stop-loss order\", \"Ask me for a status update anytime\"). NEVER phrase it as something the agent/system will do on its own — no \"Monitor the position\", \"I will watch\", or any phrasing implying background monitoring exists.",
             `Execution mode is ${mode.toUpperCase()}.`,
-            "HONESTY RULES (non-negotiable): use ONLY facts in the JSON — never invent prices, PnL, market trends, or data not present. NEVER claim monitoring/alerts are active or that you will watch the market: there is NO background monitoring system; this status is point-in-time and refreshes only when the user asks (state this plainly if relevant). No guaranteed-profit language.",
+            "HONESTY RULES (non-negotiable): use ONLY facts in the JSON/context — never invent prices, PnL, market trends, or data not present. NEVER claim monitoring/alerts are active: there is NO background monitoring system; this status is point-in-time and refreshes only when the user asks. No guaranteed-profit language.",
         ].join("\n");
-        const prompt = `User asked: ${String(ctx.message.content?.text ?? "").slice(0, 300)}\n\nStep results JSON:\n\`\`\`json\n${serialized}\n\`\`\`\n\nWrite the status report now.`;
+        const prompt = `User asked: ${String(ctx.message.content?.text ?? "").slice(0, 300)}\n${strategyContext ? `\nStrategy context (most recent plan card):\n${strategyContext}\n` : ""}\nStep results JSON:\n\`\`\`json\n${serialized}\n\`\`\`\n\nWrite the status report now.`;
         const response = await generateText({
             runtime: ctx.runtime,
             system,
@@ -1322,7 +1622,10 @@ export async function synthesizeStatusReportViaLLM(
             modelClass: ModelClass.MEDIUM,
             userId: ctx.message.userId,
             temperature: 0.1,
-            maxTokens: 1024,
+            // A–F status report (strategy, orders, performance, market, risk,
+            // recommendation) was truncating after "B. Order status" at 1024 — the
+            // per-step eval scored step5 0/3 for an incomplete report. Give it room.
+            maxTokens: 3072,
             thinkingBudget: 0,
             bypassModelClassDowngrades: true,
         });
@@ -1374,6 +1677,22 @@ async function persistFinalMemory(
     text: string,
     metadata: { kind: string; planId?: string; awaitingApproval?: boolean },
 ): Promise<Memory> {
+    // Wave-1 mode-disclosure contract: every plan card states the trading mode up front (the
+    // per-step eval failed the modified-strategy turn solely on the missing paper/live confirmation).
+    if (metadata.kind === "plan_card" && !/\*\*\[(PAPER|SHADOW|LIVE)/.test(text)) {
+        try {
+            const mode = await resolveExecutionMode(ctx);
+            const badge =
+                mode === "paper"
+                    ? "**[PAPER MODE — no real money]**\n\n"
+                    : mode === "shadow"
+                      ? "**[SHADOW MODE — hypothetical execution]**\n\n"
+                      : "**[LIVE MODE]**\n\n";
+            text = badge + text;
+        } catch {
+            /* badge is best-effort — never block the card */
+        }
+    }
     // When the plan is `awaiting_approval`, set the same metadata
     // markers the legacy CEX clarification flow uses:
     //   - `source: "cex_workflow"` (already set)
@@ -1475,6 +1794,30 @@ function isModifiedStrategyRequest(text: string): boolean {
     );
 }
 
+/**
+ * Deterministic guarantee for execution-status queries: the status report NEEDS a live mark
+ * (PnL/market section) and the balance (remaining capital) — the LLM decomposer's template
+ * mandates these reads but sometimes omits them. Inject any missing read so section C/D/E of the
+ * report always have data (the per-step eval failed step5 on exactly this).
+ */
+function injectStatusReadsIfNeeded(plan: CexPlan, messageText: string): CexPlan {
+    if (!isExecutionStatusQuery(messageText)) return plan;
+    const actions = new Set(plan.steps.map((s) => s.action));
+    const missing: Array<{ id: string; action: string; parameters: Record<string, unknown>; description: string }> = [];
+    if (!actions.has("get_ticker")) missing.push({ id: "sr-ticker", action: "get_ticker", parameters: { product_ids: ["BTCUSDT"] }, description: "Live mark price for performance/market sections" });
+    if (!actions.has("get_balance")) missing.push({ id: "sr-balance", action: "get_balance", parameters: {}, description: "Remaining capital for the risk section" });
+    if (!actions.has("get_orders")) missing.push({ id: "sr-orders", action: "get_orders", parameters: { history: true }, description: "Filled + open orders" });
+    if (!missing.length) return plan;
+    elizaLogger.info(`[CexPlanRunner] injecting ${missing.length} status read(s) for status query plan ${plan.id}: ${missing.map((m) => m.action).join(", ")}`);
+    return {
+        ...plan,
+        steps: [
+            ...plan.steps,
+            ...missing.map((m) => inflateStep({ id: m.id, action: m.action, venue: null, parameters: m.parameters, depends_on: [], description: m.description })),
+        ],
+    };
+}
+
 function injectValidationStepsIfNeeded(plan: CexPlan, messageText: string): CexPlan {
     if (planHasValidationReads(plan) || !isModifiedStrategyRequest(messageText)) {
         return plan;
@@ -1549,10 +1892,53 @@ async function emitPlanApprovalModal(
 
     const step = plan.steps[writeIdx];
     const inflated = inflateStep(step);
-    const params =
+    let params =
         (inflated?.parameters as Record<string, unknown> | undefined) ??
         step.parameters ??
         {};
+
+    // #6b — Pre-compute the concrete limit_price (trigger_drop_pct × live
+    // mid) and convert quote_size→base_size BEFORE rendering the approval
+    // modal, so each staged limit leg shows the ACTUAL price/size the user
+    // is approving (e.g. "-5% of current") instead of a blank "Set a limit
+    // price" field. Persist the result back to the plan step so the plan
+    // card AND the post-approval execution use exactly the values the user
+    // reviewed — no drift between the review-time mid and the execute-time
+    // mid (execution's own fillMissingLimitPrice is then a no-op because
+    // limit_price is present and trigger_drop_pct has been consumed).
+    // Fail-soft: on any fetch error the field stays blank and execution
+    // still fills it, matching prior behavior.
+    const modalAction = inflated?.action ?? step.action;
+    if (modalAction === "create_order") {
+        const venueForFill =
+            (typeof step.venue === "string" && step.venue.length > 0
+                ? step.venue
+                : (ctx as { defaultExchangeId?: string }).defaultExchangeId) ??
+            "binance";
+        try {
+            const filled = await fillMissingLimitPrice(
+                ctx,
+                { ...params },
+                venueForFill,
+            );
+            if (JSON.stringify(filled) !== JSON.stringify(params)) {
+                params = filled;
+                updatePlan(plan.id, (p) => {
+                    p.steps[writeIdx] = {
+                        ...p.steps[writeIdx],
+                        parameters: filled,
+                    };
+                });
+                elizaLogger.info(
+                    `[CexPlanRunner] modal prefill: computed limit_price/base_size for step ${writeIdx + 1} and persisted to plan ${plan.id}`,
+                );
+            }
+        } catch (err) {
+            elizaLogger.warn(
+                `[CexPlanRunner] modal limit-price prefill failed (fail-soft): ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+    }
 
     // Fix-NEW1 (post-PR242 iter2) — diagnostic: log what we're sending
     // to the frontend modal so the next deploy reveals whether the

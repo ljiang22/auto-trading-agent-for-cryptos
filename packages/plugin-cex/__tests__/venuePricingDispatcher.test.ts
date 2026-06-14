@@ -222,3 +222,82 @@ describe("fetch24hStatsForVenue", () => {
         expect(url).toContain("api.binance.com");
     });
 });
+
+describe("venue failover when the primary venue's public API is unavailable", () => {
+    // Repro of the reported bug: on a host where Binance public market-data
+    // is geo-blocked (HTTP 451), the approval modal's snapshot came back
+    // empty → slider stuck at 0% + no limit-prefill price. The dispatcher
+    // must fail over to the OTHER venue so callers still get live data.
+    beforeEach(() => {
+        __resetBinancePricingCacheForTests();
+        __resetCoinbasePricingCacheForTests();
+        mockedGet.mockReset();
+    });
+    afterEach(() => {
+        __resetBinancePricingCacheForTests();
+        __resetCoinbasePricingCacheForTests();
+    });
+
+    it("fails over Binance→Coinbase when Binance book-ticker is blocked (451)", async () => {
+        mockedGet
+            .mockRejectedValueOnce(
+                Object.assign(new Error("Request failed with status code 451"), {
+                    response: { status: 451 },
+                }),
+            )
+            .mockResolvedValueOnce({
+                data: { bid: "70999", ask: "71001", size: "0.5" },
+            });
+        const out = await fetchBookTickerForVenue({
+            venue: "binance",
+            symbol: "BTCUSDT",
+        });
+        expect(out?.bid).toBe("70999");
+        const urls = mockedGet.mock.calls.map((c) => c[0] as string);
+        expect(urls[0]).toContain("api.binance.com");
+        expect(urls[1]).toContain("api.exchange.coinbase.com");
+    });
+
+    it("fails over Binance→Coinbase for 24h stats too", async () => {
+        mockedGet
+            .mockRejectedValueOnce(
+                Object.assign(new Error("status code 451"), {
+                    response: { status: 451 },
+                }),
+            )
+            .mockResolvedValueOnce({
+                data: {
+                    open: "70000",
+                    high: "72000",
+                    low: "69000",
+                    last: "71400",
+                    volume: "1000",
+                },
+            });
+        const out = await fetch24hStatsForVenue({
+            venue: "binance",
+            symbol: "BTCUSDT",
+        });
+        expect(out).not.toBeNull();
+        expect(Number.parseFloat(out!.priceChangePercent)).toBeCloseTo(2, 4);
+        const urls = mockedGet.mock.calls.map((c) => c[0] as string);
+        expect(urls.some((u) => u.includes("api.exchange.coinbase.com"))).toBe(true);
+    });
+
+    it("does NOT fail over when the primary venue succeeds (single call)", async () => {
+        mockedGet.mockResolvedValueOnce({
+            data: {
+                bidPrice: "70999",
+                bidQty: "0.5",
+                askPrice: "71001",
+                askQty: "0.5",
+            },
+        });
+        const out = await fetchBookTickerForVenue({
+            venue: "binance",
+            symbol: "BTCUSDT",
+        });
+        expect(out?.bid).toBe("70999");
+        expect(mockedGet).toHaveBeenCalledTimes(1);
+    });
+});

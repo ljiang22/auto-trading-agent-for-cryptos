@@ -33,8 +33,31 @@
 
 import type { CEXSpecProvider } from "../core/types.ts";
 
-/** Total wall-clock budget for the three concurrent network fetches. */
+/** Default total wall-clock budget for the three concurrent network
+ * fetches. Tuned for production where the venue public APIs are
+ * low-latency. On slower hosts / isolated side-environments the public
+ * Binance/Coinbase round-trip can exceed this (~1 s observed), which
+ * starves the approval-modal snapshot — it comes back empty, leaving the
+ * size slider stuck at 0% and limit-order prefill with no reference
+ * price. `CEX_MARKET_SNAPSHOT_BUDGET_MS` raises the ceiling per
+ * deployment without changing the production default. */
 export const MARKET_SNAPSHOT_LATENCY_BUDGET_MS = 600;
+
+/**
+ * Resolve the snapshot latency budget: the `CEX_MARKET_SNAPSHOT_BUDGET_MS`
+ * env override (clamped to 200–10000 ms) when set and valid, else the
+ * production default.
+ */
+export function resolveSnapshotBudgetMs(): number {
+    const raw = process.env.CEX_MARKET_SNAPSHOT_BUDGET_MS;
+    if (raw) {
+        const n = Number.parseInt(raw, 10);
+        if (Number.isFinite(n) && n > 0) {
+            return Math.min(10_000, Math.max(200, n));
+        }
+    }
+    return MARKET_SNAPSHOT_LATENCY_BUDGET_MS;
+}
 
 export interface MarketSnapshotInput {
     /** Pulled from the provider via `getCEXSpecProvider(state.runtime)`. */
@@ -348,7 +371,7 @@ export async function buildMarketSnapshot(
         actionParams,
         actionName,
         venue,
-        latencyBudgetMs = MARKET_SNAPSHOT_LATENCY_BUDGET_MS,
+        latencyBudgetMs = resolveSnapshotBudgetMs(),
     } = input;
 
     // Verification is always built — it doesn't require the network.

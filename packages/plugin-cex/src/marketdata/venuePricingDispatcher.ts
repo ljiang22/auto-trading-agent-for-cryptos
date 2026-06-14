@@ -83,32 +83,85 @@ export interface VenueFetchArgs {
     symbol: string;
 }
 
+const ALT_VENUE: Record<Venue, Venue> = {
+    binance: "coinbase",
+    coinbase: "binance",
+};
+
+/**
+ * Run a per-venue market-data fetch with automatic failover to the OTHER
+ * venue when the primary returns null OR throws.
+ *
+ * Why: a venue's PUBLIC market-data API can be unavailable for reasons
+ * unrelated to the user's order — most notably geo-blocking (Binance
+ * returns HTTP 451 in some regions). When that happens the pricing helper
+ * yields null, which used to leave the approval modal with no snapshot →
+ * the size slider stuck at 0% and limit-order prefill with no reference
+ * price. The order still routes to the user's chosen venue at execution
+ * time; this only borrows the *other* venue's public ticker so the review
+ * UI has live numbers. The `run` callback re-normalizes the symbol per
+ * whichever venue it's invoked with.
+ */
+async function withVenueFailover<T>(
+    venue: Venue,
+    label: string,
+    symbol: string,
+    run: (v: Venue) => Promise<T | null>,
+): Promise<T | null> {
+    try {
+        const primary = await run(venue);
+        if (primary != null) return primary;
+    } catch (err) {
+        elizaLogger.warn(
+            `[plugin-cex] ${label} primary venue=${venue} threw: ${err instanceof Error ? err.message : String(err)}`,
+        );
+    }
+    const alt = ALT_VENUE[venue];
+    try {
+        const fallback = await run(alt);
+        if (fallback != null) {
+            elizaLogger.info(
+                `[plugin-cex] ${label} failover ${venue}→${alt} for ${symbol} (primary venue unavailable)`,
+            );
+            return fallback;
+        }
+    } catch (err) {
+        elizaLogger.warn(
+            `[plugin-cex] ${label} failover venue=${alt} threw: ${err instanceof Error ? err.message : String(err)}`,
+        );
+    }
+    return null;
+}
+
 export async function fetchBookTickerForVenue(
     args: VenueFetchArgs,
 ): Promise<BookTickerSnapshot | null> {
     const venue = canonVenue(args.venue);
-    if (venue === "coinbase") {
-        return fetchBookTickerCoinbase(toCoinbaseSymbol(args.symbol));
-    }
-    return fetchBookTickerBinance(toBinanceSymbol(args.symbol));
+    return withVenueFailover(venue, "fetchBookTicker", args.symbol, (v) =>
+        v === "coinbase"
+            ? fetchBookTickerCoinbase(toCoinbaseSymbol(args.symbol))
+            : fetchBookTickerBinance(toBinanceSymbol(args.symbol)),
+    );
 }
 
 export async function fetchDepthForVenue(
     args: VenueFetchArgs & { limit?: number },
 ): Promise<DepthSnapshot | null> {
     const venue = canonVenue(args.venue);
-    if (venue === "coinbase") {
-        return fetchDepthCoinbase(toCoinbaseSymbol(args.symbol), args.limit);
-    }
-    return fetchDepthBinance(toBinanceSymbol(args.symbol), args.limit);
+    return withVenueFailover(venue, "fetchDepth", args.symbol, (v) =>
+        v === "coinbase"
+            ? fetchDepthCoinbase(toCoinbaseSymbol(args.symbol), args.limit)
+            : fetchDepthBinance(toBinanceSymbol(args.symbol), args.limit),
+    );
 }
 
 export async function fetch24hStatsForVenue(
     args: VenueFetchArgs,
 ): Promise<Stats24hSnapshot | null> {
     const venue = canonVenue(args.venue);
-    if (venue === "coinbase") {
-        return fetch24hStatsCoinbase(toCoinbaseSymbol(args.symbol));
-    }
-    return fetch24hStatsBinance(toBinanceSymbol(args.symbol));
+    return withVenueFailover(venue, "fetch24hStats", args.symbol, (v) =>
+        v === "coinbase"
+            ? fetch24hStatsCoinbase(toCoinbaseSymbol(args.symbol))
+            : fetch24hStatsBinance(toBinanceSymbol(args.symbol)),
+    );
 }

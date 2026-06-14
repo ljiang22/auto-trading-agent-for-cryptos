@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
     __resetPlanStoreForTests,
+    applyPlanStepEdit,
     cancelPlan,
     getActivePlan,
+    getPlanById,
     savePlan,
     updatePlan,
 } from "../src/handlers/cexPlanState";
@@ -136,5 +138,118 @@ describe("cancelPlan", () => {
             p.status = "completed";
         });
         expect(() => cancelPlan(plan.id, "again")).not.toThrow();
+    });
+});
+
+describe("applyPlanStepEdit — #6d modal edits", () => {
+    it("merges whitelisted order fields into the target write step", () => {
+        savePlan(freshPlan({ id: "p-edit", user_id: "u1", room_id: "r1" }));
+        const res = applyPlanStepEdit({
+            planId: "p-edit",
+            ownerUserId: "u1",
+            stepIndex: 0,
+            params: {
+                order_configuration: {
+                    limit_limit_gtc: { base_size: "0.01", limit_price: "61000" },
+                },
+                side: "BUY",
+                status: "hacked", // non-whitelisted → must be ignored
+            },
+        });
+        expect(res.ok).toBe(true);
+        expect(res.applied).toEqual(
+            expect.arrayContaining(["order_configuration", "side"]),
+        );
+        const updated = getPlanById("p-edit");
+        expect(updated?.steps[0].parameters.order_configuration).toEqual({
+            limit_limit_gtc: { base_size: "0.01", limit_price: "61000" },
+        });
+        expect(updated?.steps[0].parameters.side).toBe("BUY");
+        // non-whitelisted param key never written
+        expect(
+            (updated?.steps[0].parameters as Record<string, unknown>).status,
+        ).toBeUndefined();
+        // step bookkeeping (status field) untouched
+        expect(updated?.steps[0].status).toBe("pending");
+    });
+
+    it("rejects edits from a non-owner", () => {
+        savePlan(freshPlan({ id: "p-own", user_id: "owner", room_id: "r" }));
+        const res = applyPlanStepEdit({
+            planId: "p-own",
+            ownerUserId: "intruder",
+            stepIndex: 0,
+            params: { side: "SELL" },
+        });
+        expect(res.ok).toBe(false);
+        expect(res.reason).toBe("forbidden");
+    });
+
+    it("rejects when no editable fields are present", () => {
+        savePlan(freshPlan({ id: "p-noop", user_id: "u", room_id: "r" }));
+        const res = applyPlanStepEdit({
+            planId: "p-noop",
+            ownerUserId: "u",
+            stepIndex: 0,
+            params: { status: "x", depends_on: [] },
+        });
+        expect(res.ok).toBe(false);
+        expect(res.reason).toBe("no_editable_fields");
+    });
+
+    it("rejects a missing plan or out-of-range step", () => {
+        expect(
+            applyPlanStepEdit({
+                planId: "missing",
+                ownerUserId: "u",
+                stepIndex: 0,
+                params: { side: "BUY" },
+            }).reason,
+        ).toBe("no_active_plan");
+        savePlan(freshPlan({ id: "p-step", user_id: "u", room_id: "r" }));
+        expect(
+            applyPlanStepEdit({
+                planId: "p-step",
+                ownerUserId: "u",
+                stepIndex: 9,
+                params: { side: "BUY" },
+            }).reason,
+        ).toBe("step_not_found");
+    });
+
+    it("refuses to edit a read step", () => {
+        savePlan(
+            freshPlan({
+                id: "p-read",
+                user_id: "u",
+                room_id: "r",
+                steps: [
+                    {
+                        id: "1",
+                        action: "get_balance",
+                        venue: "binance",
+                        parameters: {},
+                        depends_on: [],
+                        stake: "read",
+                        requires_approval: false,
+                        status: "pending",
+                    },
+                ],
+            }),
+        );
+        const res = applyPlanStepEdit({
+            planId: "p-read",
+            ownerUserId: "u",
+            stepIndex: 0,
+            params: { side: "BUY" },
+        });
+        expect(res.ok).toBe(false);
+        expect(res.reason).toBe("step_not_editable");
+    });
+
+    it("getPlanById returns the plan or null", () => {
+        savePlan(freshPlan({ id: "p-by-id", user_id: "u", room_id: "r" }));
+        expect(getPlanById("p-by-id")?.id).toBe("p-by-id");
+        expect(getPlanById("nope")).toBeNull();
     });
 });

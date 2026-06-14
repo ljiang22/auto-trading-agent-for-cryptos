@@ -204,6 +204,69 @@ export function cancelPlan(planId: string, reason: string): void {
     }
 }
 
+/** Look up a plan by id regardless of room (ownership is verified by the caller). */
+export function getPlanById(planId: string): CexPlan | null {
+    return plans.get(planId)?.plan ?? null;
+}
+
+/** Order-parameter fields a user may edit from the approval modal. Anything
+ * else (status, deps, idempotency token, trigger_drop_pct, etc.) is ignored
+ * so a modal edit can't corrupt plan bookkeeping. */
+const EDITABLE_STEP_PARAM_KEYS = new Set([
+    "order_configuration",
+    "side",
+    "product_id",
+    "symbol",
+    "leverage",
+    "margin_type",
+    "quote_size",
+    "base_size",
+    "limit_price",
+]);
+
+/**
+ * #6d — Apply a user's in-modal edits to a pending write step BEFORE they
+ * approve it, so the order that executes (and the result/plan card) reflects
+ * exactly what the user reviewed. Ownership is enforced via `ownerUserId`
+ * (must match the plan's `user_id`). Only whitelisted order fields are
+ * merged; only `create_order` / `amend_order` steps are editable. No-op +
+ * reason on any guard failure (caller treats failure as non-fatal and
+ * proceeds with the un-edited step).
+ */
+export function applyPlanStepEdit(input: {
+    planId: string;
+    ownerUserId: string;
+    stepIndex: number;
+    params: Record<string, unknown>;
+}): { ok: boolean; reason?: string; applied?: string[] } {
+    const entry = plans.get(input.planId);
+    if (!entry) return { ok: false, reason: "no_active_plan" };
+    if (entry.plan.user_id !== input.ownerUserId) {
+        return { ok: false, reason: "forbidden" };
+    }
+    const step = entry.plan.steps[input.stepIndex];
+    if (!step) return { ok: false, reason: "step_not_found" };
+    if (step.action !== "create_order" && step.action !== "amend_order") {
+        return { ok: false, reason: "step_not_editable" };
+    }
+    const applied: string[] = [];
+    for (const k of Object.keys(input.params ?? {})) {
+        if (EDITABLE_STEP_PARAM_KEYS.has(k)) applied.push(k);
+    }
+    if (applied.length === 0) return { ok: false, reason: "no_editable_fields" };
+    updatePlan(input.planId, (p) => {
+        const s = p.steps[input.stepIndex];
+        if (!s) return;
+        const merged = { ...(s.parameters ?? {}) } as Record<string, unknown>;
+        for (const k of applied) merged[k] = input.params[k];
+        s.parameters = merged;
+    });
+    elizaLogger.info(
+        `[CexPlan] applied user edits to plan ${input.planId} step ${input.stepIndex}: ${applied.join(",")}`,
+    );
+    return { ok: true, applied };
+}
+
 /**
  * Test-only: drop everything. The production store is process-lifetime
  * so resetting between test files is the safest way to keep state

@@ -124,15 +124,21 @@ export const institutionalCryptoSearch: Action = {
         elizaLogger.log("Options:", options);
         elizaLogger.log("==========================================");
 
-        const finalSearchQuery = cleanMessageTextForSearch(options?.query || "").replace(/^\w+:\s*/i, "");
+        // Resilient query resolution: prefer the workflow-supplied query,
+        // then fall back to the task/message text, then a domain default.
+        // A task-chain step that doesn't thread `query` (e.g. "Search
+        // Bitcoin Institutional Adoption News") must still run, not
+        // hard-fail the whole task with "requires a valid query parameter".
+        let finalSearchQuery = cleanMessageTextForSearch(options?.query || "").replace(/^\w+:\s*/i, "");
         if (!finalSearchQuery || finalSearchQuery.length < 2) {
-            await callback(createActionErrorResponse({
-                actionName: "INSTITUTIONAL_CRYPTO_SEARCH",
-                type: "institutional_crypto_search_error",
-                error: new Error("INSTITUTIONAL_CRYPTO_SEARCH requires a valid query parameter"),
-                text: "INSTITUTIONAL_CRYPTO_SEARCH requires a valid query parameter from the workflow.",
-            }));
-            return;
+            const fromMessage = cleanMessageTextForSearch(message?.content?.text || "").replace(/^\w+:\s*/i, "");
+            finalSearchQuery =
+                fromMessage && fromMessage.length >= 2
+                    ? fromMessage
+                    : "Bitcoin cryptocurrency institutional adoption: ETFs, corporate treasuries, fund holdings, regulation";
+            elizaLogger.warn(
+                `[INSTITUTIONAL_CRYPTO_SEARCH] no valid options.query; derived fallback query: "${finalSearchQuery}"`,
+            );
         }
 
         elizaLogger.log("Final institutional search query:", finalSearchQuery);

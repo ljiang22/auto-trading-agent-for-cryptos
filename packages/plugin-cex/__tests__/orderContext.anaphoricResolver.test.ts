@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    resolveAllOrdersFromContext,
     resolveAnaphoricOrderId,
     resolveSymbolForOrderId,
 } from "../src/orderContext/anaphoricResolver";
@@ -356,5 +357,88 @@ describe("resolveSymbolForOrderId — explicit-id symbol back-fill", () => {
         });
         expect(r?.symbol).toBe("ETHUSDT");
         expect(r?.sourceMemoryId).toBe("m-fresh");
+    });
+});
+
+describe("resolveAllOrdersFromContext — batch cancel excludes filled/terminal orders", () => {
+    // Repro of the reported bug: a status report shows 1 Filled market leg +
+    // 2 Open staged legs. "cancel all of these" must only recover the 2 OPEN
+    // orders — the Filled one is not cancellable and returns "Not Found" at
+    // the venue (it had been wrongly populated into the cancel table).
+    const STATUS_REPORT_MEMO = memo(
+        "m-status",
+        [
+            "[PAPER MODE — no real money]",
+            "B. Order status",
+            "Filled Order (Leg 1 of 3):",
+            "BUY BTC-USDT, 0.004665 BTC @ 64336.91 USDT (USD value: $300.00) - Filled (Order ID: paper-ord-5wmqkm7n-1781446875250)",
+            "Open Orders (Legs 2 & 3 of 3):",
+            "BUY BTC-USDT, 0.004911 BTC @ 61089.52 USDT (USD value: $300.00) - Open (Order ID: paper-ord-yfajnc34-1781446920692)",
+            "BUY BTC-USDT, 0.003456 BTC @ 57874.28 USDT (USD value: $200.00) - Open (Order ID: paper-ord-ed4h1ff4-1781446947614)",
+        ].join("\n"),
+        2,
+    );
+
+    it("excludes the Filled order, returns only the two Open orders", () => {
+        const r = resolveAllOrdersFromContext({
+            messageText: "please cancel all of these orders",
+            locale: "en",
+            recentAssistantMemories: [STATUS_REPORT_MEMO],
+            venue: "binance",
+        });
+        expect(r).not.toBeNull();
+        const ids = r!.orders.map((o) => o.order_id);
+        expect(ids).toEqual([
+            "paper-ord-yfajnc34-1781446920692",
+            "paper-ord-ed4h1ff4-1781446947614",
+        ]);
+        expect(ids).not.toContain("paper-ord-5wmqkm7n-1781446875250");
+    });
+
+    it("excludes FILLED rows but keeps NEW + PARTIALLY_FILLED in a get_orders table", () => {
+        const TABLE = memo(
+            "m-tbl",
+            [
+                "| Symbol | Order ID | Side | Status |",
+                "|---|---|---|---|",
+                "| BTC-USDT | paper-ord-aaa11111-1781446920000 | BUY | NEW |",
+                "| BTC-USDT | paper-ord-bbb22222-1781446920001 | BUY | FILLED |",
+                "| BTC-USDT | paper-ord-ccc33333-1781446920002 | BUY | PARTIALLY_FILLED |",
+            ].join("\n"),
+            1,
+        );
+        const r = resolveAllOrdersFromContext({
+            messageText: "cancel all of them",
+            locale: "en",
+            recentAssistantMemories: [TABLE],
+            venue: "binance",
+        });
+        const ids = r!.orders.map((o) => o.order_id);
+        expect(ids).toContain("paper-ord-aaa11111-1781446920000"); // NEW → cancellable
+        expect(ids).toContain("paper-ord-ccc33333-1781446920002"); // PARTIALLY_FILLED → cancellable
+        expect(ids).not.toContain("paper-ord-bbb22222-1781446920001"); // FILLED → excluded
+    });
+
+    it("keeps all orders when no status is parseable (no regression)", () => {
+        const NO_STATUS = memo(
+            "m-nostatus",
+            [
+                "| Symbol | Order ID |",
+                "|---|---|",
+                "| BTCUSDT | 100000000001 |",
+                "| ETHUSDT | 100000000002 |",
+            ].join("\n"),
+            1,
+        );
+        const r = resolveAllOrdersFromContext({
+            messageText: "cancel all of these",
+            locale: "en",
+            recentAssistantMemories: [NO_STATUS],
+            venue: "binance",
+        });
+        expect(r!.orders.map((o) => o.order_id)).toEqual([
+            "100000000001",
+            "100000000002",
+        ]);
     });
 });

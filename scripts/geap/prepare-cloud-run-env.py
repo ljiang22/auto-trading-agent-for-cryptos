@@ -36,6 +36,12 @@ ENV_KEYS = [
 
 DEPLOY_DEFAULTS = {
     "PUBLIC_ACCESS_MODE": "1",
+    # Multi-step CEX plan executor. Without this on the Cloud Run env,
+    # runPlanModeIfApplicable short-circuits and multi-step / modified-strategy
+    # requests fall back to the legacy single-action path (re-offers strategies
+    # instead of executing the modified plan). Must be injected here because
+    # .env is gitignored and is NOT the deployment source of truth.
+    "CEX_PLAN_EXECUTION_ENABLED": "true",
     "PAPER_TRADING_ENABLED": "true",
     "DATABASE_ADAPTER": "sqlite",
     "OTEL_TRACING_ENABLED": "true",
