@@ -8965,6 +8965,25 @@ ${feedback}
                     }
                 }
             }
+            // Halt the user's armed strategy instances on kill-switch activation.
+            if (active) {
+                try {
+                    const strategyEngine = runtime.getService(ServiceType.STRATEGY_ENGINE) as
+                        | { haltUser?: (userId: string) => Promise<number> }
+                        | null;
+                    const haltedStrategies =
+                        (await strategyEngine?.haltUser?.(String(userInfo.userId))) ?? 0;
+                    if (haltedStrategies > 0) {
+                        elizaLogger.info(
+                            `[Trading] kill-switch halted ${haltedStrategies} strategy instance(s) for user=${userInfo.userId}`,
+                        );
+                    }
+                } catch (err) {
+                    elizaLogger.warn(
+                        `[Trading] kill-switch strategy halt failed: ${err instanceof Error ? err.message : String(err)}`,
+                    );
+                }
+            }
             res.json({
                 success: true,
                 kill_switch_active: active,

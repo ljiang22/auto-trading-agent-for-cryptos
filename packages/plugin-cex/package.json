@@ -39,6 +39,7 @@
     "@binance/spot": "^28.0.4",
     "@binance/wallet": "^17.0.5",
     "@elizaos/core": "workspace:^",
+    "@elizaos-plugins/plugin-sentiscore-analysis": "workspace:*",
     "@tavily/core": "^0.0.2",
     "@types/jsonwebtoken": "^9.0.9",
     "crypto": "^1.0.1",
