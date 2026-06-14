@@ -3142,6 +3142,7 @@ export enum ServiceType {
     EMAIL_AUTOMATION = "email_automation",
     NKN_CLIENT_SERVICE = "nkn_client_service",
     TRADING_RECONCILIATION = "trading_reconciliation",
+    STRATEGY_ENGINE = "strategy_engine",
 }
 
 /** Minimal interface used by cexWorkflowMessageHandler to interact with the reconciliation subsystem. */
