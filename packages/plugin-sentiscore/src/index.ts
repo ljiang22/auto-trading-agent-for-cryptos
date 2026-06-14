@@ -10,6 +10,8 @@ import { CryptoPolicySentimentAction } from "./actions/crypto_policy.ts";
 import { YoutubeSentimentAction } from "./actions/youtube.ts";
 import { MacroNewsSentimentAction } from "./actions/macro_news.ts";
 export * as actions from "./actions/index.ts";
+export { getLatestSentiment, extractLatestSentiment } from "./latestSentiment.ts";
+export type { LatestSentiment } from "./latestSentiment.ts";
 
 export const sentiscore_analysis_Plugin: Plugin = {
     name: "sentiscore_analysis",

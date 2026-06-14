@@ -34,6 +34,7 @@ const signalSchema = z.object({
      * - price.ema_cross: EMA(short) crossing EMA(long)
      * - price.atr_band: ATR-based volatility band
      * - volume.zscore: Volume z-score over window
+     * - price.pct_from_high: percent of close vs rolling N-bar high (param: window); 0 at high, negative below
      * - sentiment.score: external sentiment input (Tier-A)
      */
     kind: z.enum([
@@ -42,6 +43,7 @@ const signalSchema = z.object({
         "price.ema_cross",
         "price.atr_band",
         "volume.zscore",
+        "price.pct_from_high",
         "sentiment.score",
     ]),
     params: z.record(z.union([z.number(), z.string(), z.boolean()])).default({}),

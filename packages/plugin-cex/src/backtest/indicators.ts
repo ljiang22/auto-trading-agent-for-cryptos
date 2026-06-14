@@ -84,3 +84,37 @@ export function atr(bars: OhlcvBar[], i: number, period = 14): number {
     }
     return avg;
 }
+
+/**
+ * Z-score of the volume at index `i` over the trailing `window` bars
+ * (population std). Returns NaN until `window` bars have elapsed. When the
+ * window has zero variance, returns 0 (no anomaly) rather than NaN.
+ */
+export function volumeZScore(bars: OhlcvBar[], i: number, window: number): number {
+    if (i + 1 < window) return Number.NaN;
+    let sum = 0;
+    for (let k = i - window + 1; k <= i; k++) sum += bars[k].volume;
+    const mean = sum / window;
+    let varSum = 0;
+    for (let k = i - window + 1; k <= i; k++) {
+        const d = bars[k].volume - mean;
+        varSum += d * d;
+    }
+    const std = Math.sqrt(varSum / window);
+    if (std === 0) return 0;
+    return (bars[i].volume - mean) / std;
+}
+
+/**
+ * Percent of the close at index `i` relative to the highest high over the
+ * trailing `window` bars (inclusive). 0 at a fresh high; negative below it
+ * (e.g. -5 means 5% below the rolling high — a "dip"). NaN until `window`
+ * bars have elapsed.
+ */
+export function pctFromHigh(bars: OhlcvBar[], i: number, window: number): number {
+    if (i + 1 < window) return Number.NaN;
+    let hi = -Infinity;
+    for (let k = i - window + 1; k <= i; k++) hi = Math.max(hi, bars[k].high);
+    if (hi <= 0) return Number.NaN;
+    return ((bars[i].close - hi) / hi) * 100;
+}
