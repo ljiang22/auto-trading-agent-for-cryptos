@@ -60,7 +60,15 @@ export function makeNotifier(
     } catch (err) {
       elizaLogger.warn(`[strategy-engine] notify emit failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-    const mem = buildFillMemory({ runtimeAgentId: runtime.agentId, roomId, instance, fill });
-    await runtime.messageManager.createMemory(mem, "messages");
+    // Persisting the chat notification is best-effort: a fill is already
+    // committed by the time we notify, so a memory-write failure (e.g. FK
+    // constraints for a synthetic user/room) must never bubble up and turn a
+    // successful fill into a tick error.
+    try {
+      const mem = buildFillMemory({ runtimeAgentId: runtime.agentId, roomId, instance, fill });
+      await runtime.messageManager.createMemory(mem, "messages");
+    } catch (err) {
+      elizaLogger.warn(`[strategy-engine] notify persist failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 }

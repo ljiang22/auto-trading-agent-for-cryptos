@@ -241,7 +241,10 @@ function buildRiskContext(
     },
     estimated_notional_usd: mid * inst.position.base_qty,
     market_mid_usd: mid,
-    market_data_age_ms: sc.ageMs,
+    // The order price is the live mid (fetched fresh each tick); kline bar-age
+    // staleness is gated separately in signalCompute via pause_on_market_data_lag_s.
+    // Do NOT pass bar age here or the risk freshness rule blocks every hourly-bar order.
+    market_data_age_ms: 0,
     rolling_24h_pnl_usd: inst.day_realized_pnl_usd,
     now_ms: nowMs,
   };

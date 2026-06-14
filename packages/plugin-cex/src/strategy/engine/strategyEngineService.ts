@@ -1,6 +1,6 @@
 import { Service, ServiceType, type IAgentRuntime, type UUID, stringToUuid, elizaLogger } from "@elizaos/core";
 import { fetchOhlcvBarsSafe } from "../../backtest/realDataSource";
-import { fetchBinanceUsdtPrices } from "../../exchanges/services/binancePricing";
+import { fetchBookTickerForVenue } from "../../marketdata/venuePricingDispatcher";
 import { createPaperVenueForRuntime } from "../../actions/shared";
 import { evaluate } from "../../risk/riskEngine";
 import { computeSignals, type SignalComputeDeps } from "./signalCompute";
@@ -129,10 +129,14 @@ export class StrategyEngineService extends Service {
     const signalDeps: SignalComputeDeps = {
       fetchKlines: ({ venue, symbol, intervalMs, count, endTs }) =>
         fetchOhlcvBarsSafe({ venue: dataVenue(venue), symbol, intervalMs, count, endTs }),
-      fetchMid: async (_venue, symbol) => {
-        const prices = await fetchBinanceUsdtPrices([symbol]);
-        const v = prices[symbol.toUpperCase()];
-        return typeof v === "number" ? v : null;
+      fetchMid: async (venue, symbol) => {
+        // Venue-aware: dispatcher normalizes the symbol per venue + fails over.
+        const bt = await fetchBookTickerForVenue({ venue: dataVenue(venue), symbol });
+        if (!bt) return null;
+        const bid = Number(bt.bid);
+        const ask = Number(bt.ask);
+        if (Number.isFinite(bid) && Number.isFinite(ask) && bid > 0 && ask > 0) return (bid + ask) / 2;
+        return Number.isFinite(ask) && ask > 0 ? ask : Number.isFinite(bid) && bid > 0 ? bid : null;
       },
       getEquityUsd: async (userId, venue) => {
         const paper = await createPaperVenueForRuntime(runtime, dataVenue(venue));

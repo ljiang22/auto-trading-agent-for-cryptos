@@ -33,7 +33,11 @@ CREATE INDEX IF NOT EXISTS "idx_strategy_instances_status" ON "strategy_instance
 const ACTIVE_STATUSES = ["armed", "paused"];
 
 export class SqliteStrategyInstanceStore implements StrategyInstanceStore {
-  constructor(private db: SqliteHandle) {}
+  constructor(private db: SqliteHandle) {
+    // Ensure the table exists even if the adapter-sqlite schema wasn't rebuilt
+    // with the strategy_instances DDL. Idempotent (CREATE TABLE IF NOT EXISTS).
+    this.db.exec(STRATEGY_INSTANCES_DDL);
+  }
 
   async get(id: string): Promise<StrategyInstance | null> {
     const row = this.db
