@@ -52,9 +52,18 @@ export const armStrategyAction: Action = {
       const mems = await runtime.messageManager.getMemories({ roomId: memory.roomId, count: 50, tableName: "messages", agentId: runtime.agentId });
       dsl = recoverCompiledStrategy(mems);
     }
-    if (!dsl && typeof memory.content?.text === "string" && /dca|rsi|strategy|buy the dip/i.test(memory.content.text)) {
-      const compiled = compileNlToDsl(memory.content.text, { locale: "en", owner: String(memory.userId), venue: "paper" });
-      if (compiled.ok) dsl = compiled.strategy;
+    // Fresh-compile fallback: prefer an explicit strategy NL passed by the
+    // decomposer (parameters.description / naturalLanguage), else the message text.
+    if (!dsl) {
+      const nl =
+        typeof opts.description === "string" ? opts.description
+        : typeof opts.naturalLanguage === "string" ? opts.naturalLanguage
+        : typeof memory.content?.text === "string" ? memory.content.text
+        : "";
+      if (nl && /dca|rsi|strategy|buy the dip|take profit|stop loss|dip/i.test(nl)) {
+        const compiled = compileNlToDsl(nl, { locale: "en", owner: String(memory.userId), venue: "paper" });
+        if (compiled.ok) dsl = compiled.strategy;
+      }
     }
     if (!dsl) {
       await callback?.({ text: "I couldn't find a compiled strategy. Please `compile_strategy` first, then arm it.", action: "arm_strategy" });

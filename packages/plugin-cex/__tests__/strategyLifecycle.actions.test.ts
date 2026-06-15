@@ -31,6 +31,22 @@ describe("arm_strategy action", () => {
     expect(cb).toHaveBeenCalledWith(expect.objectContaining({ action: "arm_strategy" }));
   });
 
+  it("compiles fresh from options.description when no DSL is recovered (decomposer arm step)", async () => {
+    const armStrategy = vi.fn().mockImplementation(async (_u: string, d: any) => ({ instance_id: "i2", status: "armed", dsl: d }));
+    const cb = vi.fn();
+    const memory = { roomId: "r", userId: "u1", content: { text: "Arm the compiled strategy" } } as any;
+    await armStrategyAction.handler(
+      runtimeWith({ armStrategy }, []),
+      memory, undefined,
+      { description: "DCA $20 of BTC weekly, buy the dip at -5% from the 20-day high, take profit 3% stop loss 2%" },
+      cb,
+    );
+    expect(armStrategy).toHaveBeenCalledTimes(1);
+    const armedDsl = armStrategy.mock.calls[0][1];
+    expect(armedDsl.signals.some((s: any) => s.kind === "price.pct_from_high")).toBe(true);
+    expect(cb).toHaveBeenCalledWith(expect.objectContaining({ action: "arm_strategy" }));
+  });
+
   it("asks for a strategy when none can be recovered", async () => {
     const service = { armStrategy: vi.fn() };
     const cb = vi.fn();

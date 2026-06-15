@@ -226,6 +226,12 @@ export const READ_ONLY_ACTIONS = new Set<string>([
     // `get_ticker` is already in the set above (added pre-Fix 15 as a
     // forward-looking entry).
     "get_orderbook",
+    // Strategy actions: compiling + backtesting move no money (read-only
+    // analysis); list_strategies is a status read. arm/pause/resume/stop are
+    // writes (arm is the auto-execution gate) and stay out of this set.
+    "compile_strategy",
+    "run_backtest",
+    "list_strategies",
 ]);
 
 export function deriveStake(action: string): CexPlanStepStake {

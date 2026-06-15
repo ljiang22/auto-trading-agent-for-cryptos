@@ -25,6 +25,9 @@ const READ_ONLY_ACTIONS = new Set<string>([
     "get_orderbook",
     // StrategyEngineService — read-only status view.
     "list_strategies",
+    // Strategy authoring/analysis move no money (read-only); arming is the gate.
+    "compile_strategy",
+    "run_backtest",
 ]);
 
 const WRITE_ACTIONS = new Set<string>([
