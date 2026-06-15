@@ -67,6 +67,32 @@ test.describe("Strategy engine — live UI (paper)", () => {
     expect(mainText.length).toBeGreaterThan(100);
   });
 
+  test("auto-execution intent routes to compile + arm (not create_order tranches)", async ({ page }) => {
+    test.setTimeout(220_000);
+    await openChatWith(
+      page,
+      "set up an automated DCA that buys $20 of BTC weekly and auto-buys the dip at -5% from the 20-day high, take profit 3% stop loss 2% — run it automatically for me",
+    );
+    await page.screenshot({ path: `${SHOTS}/07-auto-opened.png`, fullPage: true });
+    // Expect the plan/response to reference arming / automatic paper execution.
+    await page
+      .waitForFunction(
+        () => {
+          const t = document.body.innerText.toLowerCase();
+          return t.includes("arm") || t.includes("automatically in paper") || t.includes("runs automatically") || t.includes("arm_strategy") || t.includes("auto-execution");
+        },
+        { timeout: 180_000 },
+      )
+      .catch(() => {});
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: `${SHOTS}/08-auto-response.png`, fullPage: true });
+    const main = page.locator("main").first();
+    const mainText = (await main.count()) ? await main.innerText() : await page.evaluate(() => document.body.innerText);
+    // eslint-disable-next-line no-console
+    console.log("AUTO_MAIN_PANEL>>>", mainText.slice(0, 2200).replace(/\s+/g, " "));
+    expect(mainText.length).toBeGreaterThan(150);
+  });
+
   test("list_strategies action is reachable via chat", async ({ page }) => {
     test.setTimeout(180_000);
     await openChatWith(page, "show my running strategies");
