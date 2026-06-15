@@ -127,8 +127,19 @@ export class StrategyEngineService extends Service {
 
   private buildDeps(runtime: IAgentRuntime, store: StrategyInstanceStore): EngineDeps {
     const signalDeps: SignalComputeDeps = {
-      fetchKlines: ({ venue, symbol, intervalMs, count, endTs }) =>
-        fetchOhlcvBarsSafe({ venue: dataVenue(venue), symbol, intervalMs, count, endTs }),
+      fetchKlines: async ({ venue, symbol, intervalMs, count, endTs }) => {
+        const primary = dataVenue(venue);
+        const alt: "binance" | "coinbase" = primary === "binance" ? "coinbase" : "binance";
+        // Fail over to the alternate public venue when the primary returns no
+        // bars (e.g. the primary is geo-blocked, or the symbol's quote only
+        // lists on the other venue). Mirrors the mid-price failover in the
+        // venue dispatcher; without it a geo-blocked primary strands the tick.
+        let bars = await fetchOhlcvBarsSafe({ venue: primary, symbol, intervalMs, count, endTs });
+        if (!bars || bars.length === 0) {
+          bars = await fetchOhlcvBarsSafe({ venue: alt, symbol, intervalMs, count, endTs });
+        }
+        return bars;
+      },
       fetchMid: async (venue, symbol) => {
         // Venue-aware: dispatcher normalizes the symbol per venue + fails over.
         const bt = await fetchBookTickerForVenue({ venue: dataVenue(venue), symbol });

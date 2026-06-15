@@ -48,6 +48,16 @@ export const armStrategyAction: Action = {
     }
     const opts = (options ?? {}) as Record<string, unknown>;
     let dsl = (opts.compiledStrategy as StrategyDSL | undefined) ?? null;
+    // Primary recovery: user-scoped runtime cache written by compile_strategy
+    // (room-independent — survives the SSE room-remap between compile and arm).
+    if (!dsl) {
+      try {
+        const cached = await runtime.cacheManager?.get?.(`last_compiled_strategy:${String(memory.userId)}`);
+        if (typeof cached === "string") dsl = JSON.parse(cached) as StrategyDSL;
+        else if (cached && typeof cached === "object") dsl = cached as StrategyDSL;
+      } catch { /* fall through to other channels */ }
+    }
+    // Secondary: room-scoped memory (works when compile + arm share a room).
     if (!dsl) {
       const mems = await runtime.messageManager.getMemories({ roomId: memory.roomId, count: 50, tableName: "messages", agentId: runtime.agentId });
       dsl = recoverCompiledStrategy(mems);

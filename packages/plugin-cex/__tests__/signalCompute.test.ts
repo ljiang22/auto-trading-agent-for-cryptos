@@ -66,13 +66,23 @@ describe("computeSignals", () => {
     expect(res.missing).toContain("sent");
   });
 
-  it("marks fresh=false when the last bar is older than the lag budget", async () => {
-    const stale = fixtureBars(now - 3_600_000); // last bar ~1h old
+  it("marks fresh=false when the last bar is older than one bar interval + lag", async () => {
+    // Default bar interval is 1h; a last bar ~3h old exceeds interval + lag.
+    const stale = fixtureBars(now - 3 * 3_600_000);
     const res = await computeSignals({
       dsl: { ...dsl([{ id: "r", kind: "price.rsi", params: { period: 14 } }]), resilience: { pause_on_market_data_lag_s: 60 } },
       symbol: "BTCUSDT", nowMs: now, deps: deps({ fetchKlines: async () => stale }),
     });
     expect(res.fresh).toBe(false);
+  });
+
+  it("marks fresh=true for a normal ~1h-old hourly bar (current bar still forming)", async () => {
+    // The default fixture's last bar is 1 minute old → well within interval + lag.
+    const res = await computeSignals({
+      dsl: dsl([{ id: "r", kind: "price.rsi", params: { period: 14 } }]),
+      symbol: "BTCUSDT", nowMs: now, deps: deps(),
+    });
+    expect(res.fresh).toBe(true);
   });
 
   it("returns null context when klines are unavailable", async () => {

@@ -122,11 +122,14 @@ export async function computeSignals(args: {
   const midPrice = midRaw ?? (bars ? bars[last].close : 0);
   const equityUsd = await deps.getEquityUsd(args.userId ?? "", venue);
 
-  // Freshness from the last bar (sentiment-only strategies are always "fresh"
-  // for bar purposes; sentiment staleness is handled by getSentiment returning null).
+  // Freshness from the last bar. A kline bar is inherently up to one interval
+  // old (the current bar is still forming), so the budget is ONE bar interval
+  // PLUS the configured real-time lag tolerance. Using only pause_on_market_data_lag_s
+  // (default 30s) would mark every hourly-bar strategy permanently stale and it
+  // would never trade. Sentiment-only strategies have no bars and are "fresh".
   const lagBudgetMs = Number(dsl.resilience?.pause_on_market_data_lag_s ?? 30) * 1000;
   const ageMs = bars ? nowMs - bars[last].timestamp : 0;
-  const fresh = ageMs <= lagBudgetMs;
+  const fresh = !bars || ageMs <= DEFAULT_BAR_INTERVAL_MS + lagBudgetMs;
 
   return {
     context: { signals, equityUsd, midPrice },
