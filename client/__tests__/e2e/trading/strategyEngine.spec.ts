@@ -93,6 +93,42 @@ test.describe("Strategy engine — live UI (paper)", () => {
     expect(mainText.length).toBeGreaterThan(150);
   });
 
+  test("manual 'execute strategy' compiles, then 'arm it' finds + arms it", async ({ page }) => {
+    test.setTimeout(260_000);
+    await openChatWith(
+      page,
+      "help me execute this strategy: Hybrid DCA + Risk-Control — buy $100 of BTC every two weeks; if BTC drops 5% from its 7-day high buy an extra $50 (max 2/month); take profit: sell 25% at +20% unrealized; stop-loss: pause new buys if 15% below average entry.",
+    );
+    // The manual plan auto-runs the reads incl. compile_strategy (the bug fix).
+    await page
+      .waitForFunction(() => document.body.innerText.toLowerCase().includes("compiled strategy"), { timeout: 180_000 })
+      .catch(() => {});
+    await page.screenshot({ path: `${SHOTS}/09-manual-compiled.png`, fullPage: true });
+    const compiled = (await page.evaluate(() => document.body.innerText)).toLowerCase().includes("compiled strategy");
+
+    // Now arm it — must recover the just-compiled strategy (not "couldn't find").
+    const input = page.getByTestId("chat-input");
+    await input.click();
+    await input.fill("arm it");
+    await input.press("Enter");
+    await page
+      .waitForFunction(
+        () => {
+          const t = document.body.innerText.toLowerCase();
+          return t.includes("armed") || t.includes("arm this strategy") || t.includes("authorize") || t.includes("couldn't find a compiled strategy");
+        },
+        { timeout: 120_000 },
+      )
+      .catch(() => {});
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: `${SHOTS}/10-arm-it.png`, fullPage: true });
+    const body = (await page.evaluate(() => document.body.innerText)).toLowerCase();
+    // eslint-disable-next-line no-console
+    console.log("MANUAL_ARM_RESULT>>> compiledSeen=", compiled, " couldntFind=", body.includes("couldn't find a compiled strategy"));
+    expect(compiled).toBe(true);
+    expect(body.includes("couldn't find a compiled strategy")).toBe(false);
+  });
+
   test("list_strategies action is reachable via chat", async ({ page }) => {
     test.setTimeout(180_000);
     await openChatWith(page, "show my running strategies");

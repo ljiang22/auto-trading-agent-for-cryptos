@@ -432,9 +432,10 @@ export const CEX_ACTION_SCHEMAS: Record<string, CEXActionSchema> = {
     },
     arm_strategy: {
         description: "Arm a compiled strategy for paper auto-execution (recovers the last compiled strategy).",
-        parameters: {
-            instance_id: { type: "string", required: false, description: "Strategy instance id (optional; recovers last compiled)." },
-        },
+        // No user-editable parameters: arm always targets the user's most
+        // recently compiled strategy, so the approval modal shows only the
+        // confirm checkbox (no confusing empty 'instance_id' field).
+        parameters: {},
     },
     pause_strategy: {
         description: "Pause a running strategy instance.",

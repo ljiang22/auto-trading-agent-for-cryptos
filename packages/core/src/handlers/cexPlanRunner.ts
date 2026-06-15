@@ -1039,36 +1039,49 @@ async function executeReadyReads(
     ctx: RunPlanModeContext,
     planId: string,
 ): Promise<void> {
-    let plan = getActivePlanById(planId);
-    if (!plan) return;
+    // Drain successive read WAVES. A read may depend on an earlier read
+    // (e.g. compile_strategy depends_on get_balance), and readableSteps only
+    // returns reads whose deps are already `ok` — so a single pass strands the
+    // dependent read as `pending`, and the downstream write that depends on it
+    // never becomes ready (plan silently "completes" with steps pending; the
+    // compile never runs, so a later "arm it" finds no compiled strategy).
+    // Re-scan after each wave until no ready reads remain. Bounded by step count.
+    const maxWaves = (getActivePlanById(planId)?.steps.length ?? 0) + 1;
+    for (let wave = 0; wave < maxWaves; wave++) {
+        const plan = getActivePlanById(planId);
+        if (!plan) return;
 
-    const idxs = readableSteps(plan);
-    if (idxs.length === 0) return;
+        const idxs = readableSteps(plan);
+        if (idxs.length === 0) return;
 
-    elizaLogger.info(
-        `[CexPlanRunner] executing ${idxs.length} parallel read(s) for plan ${planId}`,
-    );
+        elizaLogger.info(
+            `[CexPlanRunner] executing ${idxs.length} parallel read(s) for plan ${planId} (wave ${wave + 1})`,
+        );
 
-    const stepsToRun = idxs.map((i) => plan!.steps[i]);
-    updatePlan(planId, (p) => {
-        for (const i of idxs) p.steps[i].status = "in_progress";
-    });
+        const stepsToRun = idxs.map((i) => plan.steps[i]);
+        updatePlan(planId, (p) => {
+            for (const i of idxs) p.steps[i].status = "in_progress";
+        });
 
-    const results = await Promise.all(
-        stepsToRun.map(async (step) => ({ step, res: await invokeAction(ctx, step) })),
-    );
+        const results = await Promise.all(
+            stepsToRun.map(async (step) => ({ step, res: await invokeAction(ctx, step) })),
+        );
 
-    updatePlan(planId, (p) => {
-        for (const { step, res } of results) {
-            if (res.ok) {
-                markStepOk(p, step.id, res.payload);
-            } else {
-                markStepFailedAndBail(p, step.id, res.error ?? "unknown error");
+        let bailed = false;
+        updatePlan(planId, (p) => {
+            for (const { step, res } of results) {
+                if (res.ok) {
+                    markStepOk(p, step.id, res.payload);
+                } else {
+                    markStepFailedAndBail(p, step.id, res.error ?? "unknown error");
+                    bailed = true;
+                }
             }
-        }
-        advanceCursor(p);
-        p.status = decideStatus(p);
-    });
+            advanceCursor(p);
+            p.status = decideStatus(p);
+        });
+        if (bailed) return; // a read failed → plan bailed; stop draining
+    }
 }
 
 /**
