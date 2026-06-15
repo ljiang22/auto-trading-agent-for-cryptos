@@ -105,8 +105,10 @@ export const compileStrategyAction: Action = {
         // unreliable across the compile→arm hand-off. The Memory write is kept
         // as a secondary channel + audit record.
         try {
+            const { resolveStrategyUserId } = await import("../strategy/engine/resolveUser");
+            const cacheUserId = await resolveStrategyUserId(runtime, memory);
             await runtime.cacheManager?.set?.(
-                `last_compiled_strategy:${String(memory.userId)}`,
+                `last_compiled_strategy:${cacheUserId}`,
                 JSON.stringify(result.strategy),
             );
         } catch (e) {

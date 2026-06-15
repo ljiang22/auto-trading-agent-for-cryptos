@@ -3,6 +3,7 @@ import {
   ServiceType,
 } from "@elizaos/core";
 import { recoverCompiledStrategy } from "../strategy/engine/compiledStrategyMemory";
+import { resolveStrategyUserId } from "../strategy/engine/resolveUser";
 import { compileNlToDsl } from "../strategy/nlToDSL";
 import type { StrategyDSL } from "../strategy/strategyDSL";
 import type { StrategyInstance } from "../strategy/engine/strategyInstance";
@@ -47,12 +48,13 @@ export const armStrategyAction: Action = {
       return { success: false };
     }
     const opts = (options ?? {}) as Record<string, unknown>;
+    const userId = await resolveStrategyUserId(runtime, memory);
     let dsl = (opts.compiledStrategy as StrategyDSL | undefined) ?? null;
     // Primary recovery: user-scoped runtime cache written by compile_strategy
     // (room-independent — survives the SSE room-remap between compile and arm).
     if (!dsl) {
       try {
-        const cached = await runtime.cacheManager?.get?.(`last_compiled_strategy:${String(memory.userId)}`);
+        const cached = await runtime.cacheManager?.get?.(`last_compiled_strategy:${userId}`);
         if (typeof cached === "string") dsl = JSON.parse(cached) as StrategyDSL;
         else if (cached && typeof cached === "object") dsl = cached as StrategyDSL;
       } catch { /* fall through to other channels */ }
@@ -71,7 +73,7 @@ export const armStrategyAction: Action = {
         : typeof memory.content?.text === "string" ? memory.content.text
         : "";
       if (nl && /dca|rsi|strategy|buy the dip|take profit|stop loss|dip/i.test(nl)) {
-        const compiled = compileNlToDsl(nl, { locale: "en", owner: String(memory.userId), venue: "paper" });
+        const compiled = compileNlToDsl(nl, { locale: "en", owner: userId, venue: "paper" });
         if (compiled.ok) dsl = compiled.strategy;
       }
     }
@@ -80,7 +82,7 @@ export const armStrategyAction: Action = {
       return { success: false };
     }
     const wasLive = dsl.identity.mode === "live" || dsl.identity.status === "live";
-    const inst = await engine.armStrategy(String(memory.userId), dsl);
+    const inst = await engine.armStrategy(userId, dsl);
     const note = wasLive ? " (downgraded from live to **paper** — live auto-execution is not permitted)" : "";
     await callback?.({
       text: `**[PAPER MODE — no real money]** Armed strategy \`${inst.instance_id}\`${note}. It will evaluate every ${dsl.operations.evaluation_interval_seconds}s.`,
@@ -99,12 +101,16 @@ function lifecycleAction(name: "pause_strategy" | "resume_strategy" | "stop_stra
     handler: async (runtime, memory, _state, options, callback?: HandlerCallback) => {
       const engine = getEngine(runtime);
       if (!engine) { await callback?.({ text: "The strategy engine is not enabled.", action: name }); return { success: false }; }
-      const userId = String(memory.userId);
+      const userId = await resolveStrategyUserId(runtime, memory);
       const opts = (options ?? {}) as Record<string, unknown>;
-      let instanceId = typeof opts.instance_id === "string" ? opts.instance_id : null;
+      const list = await engine.listForUser(userId);
+      const candidates = list.filter((i) => i.status === "armed" || i.status === "paused");
+      let instanceId = typeof opts.instance_id === "string" && opts.instance_id.trim() ? opts.instance_id.trim() : null;
+      // Ignore an instance_id that isn't actually one of the user's strategies —
+      // the LLM sometimes supplies a stale/hallucinated id from earlier context.
+      // Fall back to auto-resolving the single active strategy.
+      if (instanceId && !list.some((i) => i.instance_id === instanceId)) instanceId = null;
       if (!instanceId) {
-        const list = await engine.listForUser(userId);
-        const candidates = list.filter((i) => i.status === "armed" || i.status === "paused");
         if (candidates.length === 1) instanceId = candidates[0].instance_id;
         else if (candidates.length === 0) { await callback?.({ text: "You have no active strategies.", action: name }); return { success: false }; }
         else { await callback?.({ text: `You have ${candidates.length} active strategies; specify which by ID. Use \`list_strategies\`.`, action: name }); return { success: false }; }
@@ -128,7 +134,7 @@ export const listStrategiesAction: Action = {
   handler: async (runtime, memory, _state, _options, callback?: HandlerCallback) => {
     const engine = getEngine(runtime);
     if (!engine) { await callback?.({ text: "The strategy engine is not enabled.", action: "list_strategies" }); return { success: false }; }
-    const list = await engine.listForUser(String(memory.userId));
+    const list = await engine.listForUser(await resolveStrategyUserId(runtime, memory));
     await callback?.({ text: renderStrategyTable(list), action: "list_strategies", metadata: { success: true, count: list.length } });
     return { success: true, count: list.length };
   },

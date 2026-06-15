@@ -28,8 +28,10 @@ const READ_ONLY_ACTIONS = new Set<string>([
     // Strategy authoring/analysis move no money (read-only); arming is the gate.
     "compile_strategy",
     "run_backtest",
-    // pause/stop reduce activity (safety-positive) → instant, no approval.
+    // pause/resume/stop control an already-armed strategy → instant, no
+    // re-approval (arm_strategy was the one-time gate).
     "pause_strategy",
+    "resume_strategy",
     "stop_strategy",
 ]);
 
@@ -44,11 +46,11 @@ const WRITE_ACTIONS = new Set<string>([
     "remove_blocked_asset",
     "add_allowed_asset",
     "remove_allowed_asset",
-    // StrategyEngineService — arming/resuming START trading, so they route
-    // through the human-input approval modal (the gate). pause/stop REDUCE
-    // activity (safety-positive) and are read-classified for instant effect.
+    // StrategyEngineService — arm_strategy is the ONE gate (arm-once approval:
+    // it starts a new strategy trading). pause/resume/stop only control an
+    // ALREADY-ARMED strategy the user authorized, so they are read-classified
+    // for instant effect (see READ_ONLY_ACTIONS).
     "arm_strategy",
-    "resume_strategy",
 ]);
 
 /**

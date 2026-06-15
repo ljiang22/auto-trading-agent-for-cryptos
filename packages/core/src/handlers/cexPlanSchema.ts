@@ -234,6 +234,7 @@ export const READ_ONLY_ACTIONS = new Set<string>([
     "run_backtest",
     "list_strategies",
     "pause_strategy",
+    "resume_strategy",
     "stop_strategy",
 ]);
 
