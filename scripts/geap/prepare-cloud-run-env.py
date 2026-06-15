@@ -42,6 +42,12 @@ DEPLOY_DEFAULTS = {
     # instead of executing the modified plan). Must be injected here because
     # .env is gitignored and is NOT the deployment source of truth.
     "CEX_PLAN_EXECUTION_ENABLED": "true",
+    # StrategyEngineService — paper-only auto-execution loop. agent/src/index.ts
+    # gates registration purely on this flag; start() no-ops without a
+    # SQLite-backed adapter, which the Cloud Run deploy uses (DATABASE_ADAPTER=sqlite).
+    # Injected here for the same reason as CEX_PLAN_EXECUTION_ENABLED: .env is
+    # gitignored and is NOT the deployment source of truth.
+    "STRATEGY_ENGINE_ENABLED": "true",
     "PAPER_TRADING_ENABLED": "true",
     "DATABASE_ADAPTER": "sqlite",
     "OTEL_TRACING_ENABLED": "true",
