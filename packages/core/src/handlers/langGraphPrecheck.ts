@@ -360,6 +360,23 @@ export const SHORT_CIRCUIT_PATTERNS: ShortCircuitPattern[] = [
         excludeIf: [ANALYSIS_INTENT_RE, NON_CRYPTO_INSTRUMENT_GUARD_RE],
     },
     {
+        // StrategyEngineService — arm/pause/resume/stop/list strategy control.
+        name: "cex_strategy_intent",
+        re: new RegExp(
+            // "arm/pause/resume/stop/list ... strategy/strategies/dca/auto-trade"
+            `\\b(?:arm|pause|resume|stop|list|show)\\b[^.!?]*\\b(?:strateg(?:y|ies)|dca|auto[- ]?trade)\\b` +
+            // "arm it" / "start it" / "run it"
+            `|\\b(?:arm|start|run)\\s+it\\b` +
+            // "my (running) strategy/strategies"
+            `|\\bmy\\s+(?:running\\s+)?strateg(?:y|ies)\\b` +
+            // zh-CN: 启动/暂停/恢复/停止 ... 策略
+            `|(?:启动|武装|暂停|恢复|停止|列出|显示)[^。!?]*策略`,
+            "iu",
+        ),
+        classification: "CEX_WORKFLOW_MESSAGE",
+        excludeIf: [ANALYSIS_INTENT_RE, NON_CRYPTO_INSTRUMENT_GUARD_RE],
+    },
+    {
         // Fix 15 — instant ticker / order-book intent. Routes
         // market-data questions (live price, bid/ask, order-book, 24h
         // volume, spread, depth) directly to the CEX workflow so the

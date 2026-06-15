@@ -12,6 +12,13 @@ import { getPnlAction } from "./getPnl";
 import { getPositionsAction } from "./getPositions";
 import { getTickerAction } from "./getTicker";
 import { getTradingModeAction } from "./getTradingMode";
+import {
+    armStrategyAction,
+    pauseStrategyAction,
+    resumeStrategyAction,
+    stopStrategyAction,
+    listStrategiesAction,
+} from "./strategyLifecycle";
 import { runBacktestAction } from "./runBacktest";
 import { setTradingModeAction } from "./setTradingMode";
 import {
@@ -170,6 +177,12 @@ export const tradeActions = [
     // the static-default path.
     getTickerAction,
     getOrderbookAction,
+    // StrategyEngineService control surface (paper-only auto-execution).
+    armStrategyAction,
+    pauseStrategyAction,
+    resumeStrategyAction,
+    stopStrategyAction,
+    listStrategiesAction,
 ];
 
 export {

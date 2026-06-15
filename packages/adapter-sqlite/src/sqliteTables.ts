@@ -452,5 +452,17 @@ CREATE INDEX IF NOT EXISTS "user_subscription_tier_history_user_observed_idx"
 CREATE INDEX IF NOT EXISTS "user_subscription_tier_history_tier_idx"
     ON "user_subscription_tier_history" ("tier");
 
+-- Table: strategy_instances (StrategyEngineService, paper-only auto-execution)
+CREATE TABLE IF NOT EXISTS "strategy_instances" (
+    "instance_id" TEXT PRIMARY KEY,
+    "user_id" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "next_eval_at" TEXT NOT NULL,
+    "data" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "idx_strategy_instances_user" ON "strategy_instances" ("user_id");
+CREATE INDEX IF NOT EXISTS "idx_strategy_instances_status" ON "strategy_instances" ("status");
+
 COMMIT;
 PRAGMA foreign_keys=ON;`;

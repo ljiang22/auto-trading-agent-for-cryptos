@@ -52,6 +52,81 @@ export function compileNlToDsl(
     // remain venue-agnostic.
     const symbol = `${baseSymbol}-${quote}`;
 
+    // Hybrid DCA + risk-control template (DCA cadence + dip-buy + TP/SL).
+    // Must run BEFORE the plain DCA template. Requires a DCA keyword AND a
+    // risk/dip/TP/SL keyword so a plain "DCA $50 weekly" stays on the DCA path.
+    const hasDca = /\bdca\b|dollar[- ]?cost|定投/.test(lower);
+    const hasRiskControl = /\bdip\b|risk|stop[- ]?loss|take[- ]?profit|\btp\b|\bsl\b|hybrid|risk[- ]?control/i.test(naturalLanguage);
+    if (hasDca && hasRiskControl) {
+        const amountM = /\$\s*([0-9]+(?:\.[0-9]+)?)/.exec(naturalLanguage);
+        const amount = amountM ? Number.parseFloat(amountM[1]) : 50;
+        const dipM = /-\s*([0-9]+(?:\.[0-9]+)?)\s*%/.exec(naturalLanguage); // leading '-' avoids matching "take profit 3%"
+        const dipPct = dipM ? Number.parseFloat(dipM[1]) : 5;
+        const tpM = /take[- ]?profit\s*([0-9]+(?:\.[0-9]+)?)\s*%/i.exec(naturalLanguage);
+        const tpPct = tpM ? Number.parseFloat(tpM[1]) : 3;
+        const slM = /stop[- ]?loss\s*([0-9]+(?:\.[0-9]+)?)\s*%/i.exec(naturalLanguage);
+        const slPct = slM ? Number.parseFloat(slM[1]) : 2;
+        const winM = /([0-9]+)[- ]?day/i.exec(naturalLanguage);
+        const window = winM ? Number.parseInt(winM[1], 10) : 20;
+        const cadence = /\bdaily\b|每日/.test(lower)
+            ? 86400
+            : /\bweekly\b|每周/.test(lower)
+              ? 7 * 86400
+              : /\bhourly\b|每小时/.test(lower)
+                ? 3600
+                : 86400;
+
+        const draft: StrategyDSL = {
+            identity: {
+                id: `hybrid-dca-${baseSymbol.toLowerCase()}-${cadence}`,
+                version: 1,
+                owner: options.owner,
+                status: "paper",
+                mode: "paper",
+                name: `Hybrid DCA + Risk-Control ${baseSymbol}`,
+            },
+            universe: { venue: options.venue, symbols: [symbol] },
+            signals: [{ id: "dip", kind: "price.pct_from_high", params: { window } }],
+            entries: [
+                // Dip buy first: a larger tranche when price is >= dipPct below the rolling high.
+                {
+                    id: "dip_buy",
+                    when: { op: "lt", args: ["dip", -Math.abs(dipPct)] },
+                    then: { order_type: "market", side: "BUY", sizing: { kind: "quote_size", value: amount * 2 }, time_in_force: "IOC" },
+                },
+                // DCA floor: always-true sentinel so each cadence tick buys the base tranche.
+                {
+                    id: "dca",
+                    when: { op: "gte", args: [1, 1] },
+                    then: { order_type: "market", side: "BUY", sizing: { kind: "quote_size", value: amount }, time_in_force: "IOC" },
+                },
+            ],
+            // Schema requires >=1 exit; TP/SL is enforced engine-side. Never-true sentinel.
+            exits: [
+                {
+                    id: "noop_exit",
+                    when: { op: "eq", args: [0, 1] },
+                    then: { order_type: "market", side: "SELL", sizing: { kind: "pct_equity", value: 100 }, time_in_force: "IOC" },
+                },
+            ],
+            risk: {
+                max_position_notional_usd: amount * 100,
+                max_daily_loss_usd: amount * 10,
+                max_concurrent_positions: 1,
+                per_trade_take_profit_bps: Math.round(tpPct * 100),
+                per_trade_stop_loss_bps: Math.round(slPct * 100),
+                slippage_bps_max: 50,
+            },
+            operations: { evaluation_interval_seconds: cadence, persistent: true, halt_on_error: true },
+            resilience: { auto_kill_on_loss_limit: true, pause_on_stale_orders: 3, pause_on_market_data_lag_s: 600 },
+        };
+        const parsed = tryParseStrategyDSL(draft);
+        if (parsed.ok === true) {
+            return { ok: true, strategy: parsed.value, derived_by_heuristic: true };
+        }
+        // Fall through to other templates if the hybrid draft somehow fails to parse.
+    }
+
     // DCA template
     if (/\bdca\b|dollar[- ]?cost|定投/.test(lower)) {
         const dollarAmountMatch = /\$\s*([0-9]+(?:\.[0-9]+)?)/.exec(naturalLanguage);

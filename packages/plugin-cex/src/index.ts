@@ -1301,3 +1301,7 @@ export {
     type RetrieveQuery,
     type TrustTier,
 } from "./ranking";
+
+// StrategyEngineService — paper-only auto-execution background service.
+export { StrategyEngineService, haltUserInstances } from "./strategy/engine/strategyEngineService";
+export type { StrategyInstance } from "./strategy/engine/strategyInstance";

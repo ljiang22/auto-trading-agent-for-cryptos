@@ -430,6 +430,35 @@ export const CEX_ACTION_SCHEMAS: Record<string, CEXActionSchema> = {
             exchange: INJECTED_EXCHANGE_PARAM,
         },
     },
+    arm_strategy: {
+        description: "Arm a compiled strategy for paper auto-execution (recovers the last compiled strategy).",
+        // No user-editable parameters: arm always targets the user's most
+        // recently compiled strategy, so the approval modal shows only the
+        // confirm checkbox (no confusing empty 'instance_id' field).
+        parameters: {},
+    },
+    pause_strategy: {
+        description: "Pause a running strategy instance.",
+        parameters: {
+            instance_id: { type: "string", required: false, description: "Strategy instance id (optional when the user has exactly one active)." },
+        },
+    },
+    resume_strategy: {
+        description: "Resume a paused strategy instance.",
+        parameters: {
+            instance_id: { type: "string", required: false, description: "Strategy instance id (optional when the user has exactly one active)." },
+        },
+    },
+    stop_strategy: {
+        description: "Stop a strategy instance.",
+        parameters: {
+            instance_id: { type: "string", required: false, description: "Strategy instance id (optional when the user has exactly one active)." },
+        },
+    },
+    list_strategies: {
+        description: "List the user's strategies and their status (read-only).",
+        parameters: {},
+    },
     get_fills: {
         description: "Fetch fills/trade executions from the exchange.",
         parameters: {

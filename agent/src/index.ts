@@ -27,6 +27,7 @@ import { resolvePreferredDatabaseAdapter } from "./databaseAdapterSelection.ts";
 
 import {
     ReconciliationService,
+    StrategyEngineService,
     createMongoLedger,
     createMongoShadowDecisionWriter,
     resolveExchangeCredentials,
@@ -1047,6 +1048,19 @@ async function startAgent(
             }
         } else {
             elizaLogger.warn("[Startup] ReconciliationService not registered — DATABASE_ADAPTER is not MongoDB/DocumentDB. Trading lock and ledger unavailable.");
+        }
+
+        // StrategyEngineService — paper-only auto-execution. Off by default; gated
+        // purely on STRATEGY_ENGINE_ENABLED. Requires a SQLite-backed adapter
+        // (Mongo store parity is a follow-up); start() no-ops without one.
+        if ((runtime.getSetting("STRATEGY_ENGINE_ENABLED") ?? process.env.STRATEGY_ENGINE_ENABLED) === "true") {
+            const strategyEngine = new StrategyEngineService();
+            await runtime.registerService(strategyEngine);
+            await strategyEngine.initialize(runtime);
+            await strategyEngine.start();
+            elizaLogger.info("[Startup] StrategyEngineService registered + started (STRATEGY_ENGINE_ENABLED=true)");
+        } else {
+            elizaLogger.info("[Startup] StrategyEngineService disabled (STRATEGY_ENGINE_ENABLED not 'true')");
         }
 
         // Preload BGE-M3 embedding model BEFORE runtime initialization so the model

@@ -97,6 +97,36 @@ export const compileStrategyAction: Action = {
                 },
             });
         }
+
+        // Persist the compiled DSL so arm_strategy ("arm it") can recover it.
+        // Primary recovery channel is a USER-scoped runtime cache (room-
+        // independent): the SSE room-remap means the action's roomId can differ
+        // from the live conversation room, so room-scoped memory recovery is
+        // unreliable across the compile→arm hand-off. The Memory write is kept
+        // as a secondary channel + audit record.
+        try {
+            const { resolveStrategyUserId } = await import("../strategy/engine/resolveUser");
+            const cacheUserId = await resolveStrategyUserId(runtime, memory);
+            await runtime.cacheManager?.set?.(
+                `last_compiled_strategy:${cacheUserId}`,
+                JSON.stringify(result.strategy),
+            );
+        } catch (e) {
+            elizaLogger.warn(`[plugin-cex] compile_strategy cache write failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        try {
+            const { buildCompiledStrategyMemory } = await import("../strategy/engine/compiledStrategyMemory");
+            const mem = buildCompiledStrategyMemory({
+                agentId: runtime.agentId,
+                roomId: memory.roomId,
+                userId: memory.userId,
+                strategy: result.strategy,
+            });
+            await runtime.messageManager.createMemory(mem, "messages");
+        } catch (e) {
+            elizaLogger.warn(`[plugin-cex] compile_strategy persist failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
         return { success: true, strategy: result.strategy };
     },
 };

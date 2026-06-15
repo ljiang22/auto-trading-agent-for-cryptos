@@ -33,6 +33,12 @@ describe("plugin-cex actions index", () => {
             // Fix 15 — instant ticker + order-book lookup (public Binance endpoints).
             "get_ticker",
             "get_orderbook",
+            // StrategyEngineService — paper-only auto-execution control surface.
+            "arm_strategy",
+            "pause_strategy",
+            "resume_strategy",
+            "stop_strategy",
+            "list_strategies",
         ]);
     });
 
