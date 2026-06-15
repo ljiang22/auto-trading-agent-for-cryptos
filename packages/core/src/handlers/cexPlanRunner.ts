@@ -120,6 +120,40 @@ function isPlanExecutionEnabled(runtime: IAgentRuntime): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Single-step fall-through policy
+// ---------------------------------------------------------------------------
+
+// StrategyEngineService actions are handled deterministically by the PLAN
+// RUNNER, never the legacy single-action LLM. The legacy flow re-derives the
+// action with the full chat context and FREELANCES on strategy status/control
+// intents — e.g. "show me the running strategy" produced a generic strategy
+// *suggestion* instead of executing `list_strategies` (it pulled an old
+// "$1000 fund" thread from context). Routing these through the plan runner
+// makes the read execute directly (no LLM in the loop) and routes `arm_strategy`
+// through the chat "reply yes" approval (the reliable path) instead of the
+// legacy modal.
+const STRATEGY_ENGINE_ACTIONS: ReadonlySet<string> = new Set([
+    "arm_strategy",
+    "pause_strategy",
+    "resume_strategy",
+    "stop_strategy",
+    "list_strategies",
+]);
+
+/**
+ * Whether a decomposed plan should fall through to the legacy single-action
+ * flow. Single-step plans normally do (the legacy modal/risk/idempotency layers
+ * are well-tuned for one-shot *orders*). Strategy-engine actions are the
+ * exception: they execute via the plan runner so a status/control intent can't
+ * be silently rewritten into a freelanced answer by the legacy LLM.
+ */
+export function singleStepFallsThroughToLegacy(plan: CexPlan): boolean {
+    if (plan.steps.length !== 1) return false;
+    if (STRATEGY_ENGINE_ACTIONS.has(plan.steps[0].action)) return false;
+    return true;
+}
+
+// ---------------------------------------------------------------------------
 // TTL
 // ---------------------------------------------------------------------------
 
@@ -328,11 +362,19 @@ export async function runPlanModeIfApplicable(
     // Single-step plans go through the legacy path. The legacy modal
     // is better-tuned for one-shot orders (richer parameter review,
     // venue resolution, risk gates already wired). Don't disturb it.
-    if (plan.steps.length === 1) {
+    // EXCEPTION: StrategyEngineService actions execute via the plan runner
+    // (see singleStepFallsThroughToLegacy) so strategy status/control intents
+    // are deterministic and can't be freelanced by the legacy LLM.
+    if (singleStepFallsThroughToLegacy(plan)) {
         elizaLogger.info(
             `[CexPlanRunner] single-step plan; falling through to legacy single-action flow`,
         );
         return null;
+    }
+    if (plan.steps.length === 1) {
+        elizaLogger.info(
+            `[CexPlanRunner] single-step strategy-engine plan (${plan.steps[0].action}); executing via plan runner`,
+        );
     }
 
     // 3. Plan-time validator chain (Fix 7). Gated by

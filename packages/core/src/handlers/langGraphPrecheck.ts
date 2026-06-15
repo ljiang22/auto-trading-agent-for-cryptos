@@ -369,8 +369,15 @@ export const SHORT_CIRCUIT_PATTERNS: ShortCircuitPattern[] = [
             `|\\b(?:arm|start|run)\\s+it\\b` +
             // "my (running) strategy/strategies"
             `|\\bmy\\s+(?:running\\s+)?strateg(?:y|ies)\\b` +
-            // zh-CN: 启动/暂停/恢复/停止 ... 策略
-            `|(?:启动|武装|暂停|恢复|停止|列出|显示)[^。!?]*策略`,
+            // verb-less status queries (all require "strateg" → no false positives):
+            // "running/active/paused strategy", "strategy ... running/active/status",
+            // "what/which/any/how many ... strategies"
+            `|\\b(?:running|active|paused)\\s+strateg(?:y|ies)\\b` +
+            `|\\bstrateg(?:y|ies)\\b[^.!?]{0,40}\\b(?:running|active|paused|status)\\b` +
+            `|\\b(?:what|which|how\\s+many|any|are\\s+there|do\\s+i\\s+have)\\b[^.!?]{0,40}\\bstrateg(?:y|ies)\\b` +
+            // zh-CN: 启动/暂停/恢复/停止 ... 策略 + 状态/运行 ... 策略
+            `|(?:启动|武装|暂停|恢复|停止|列出|显示|查看)[^。!?]*策略` +
+            `|策略[^。!?]{0,20}(?:状态|运行|在跑)`,
             "iu",
         ),
         classification: "CEX_WORKFLOW_MESSAGE",
